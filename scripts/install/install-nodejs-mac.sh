@@ -119,6 +119,7 @@ install_global_tools() {
             print_success "$tool 安装完成"
         fi
     done
+    npm install -g npm-check-updates
 }
 
 verify_installation() {
@@ -174,6 +175,7 @@ main() {
     echo ""
     verify_installation
     print_next_steps
+
 }
 
 main "$@"
