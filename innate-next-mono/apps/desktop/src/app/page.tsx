@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Badge } from "@innate/ui";
 
 export default function Home() {
   const [greeting, setGreeting] = useState("");
@@ -18,39 +19,30 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-center gap-8 py-32 px-16 bg-white dark:bg-black">
-        <h1 className="text-4xl font-bold tracking-tight text-black dark:text-zinc-50">
-          Innate Playground
-        </h1>
-        <p className="text-lg text-zinc-600 dark:text-zinc-400 text-center">
-          AI Agent 学习桌面应用
-        </p>
+    <div className="flex flex-col flex-1 items-center justify-center p-8">
+      <Card className="w-full max-w-lg">
+        <CardHeader className="text-center">
+          <CardTitle className="text-3xl">Innate Playground</CardTitle>
+          <CardDescription>AI Agent 学习桌面应用</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col items-center gap-6">
+          <div className="flex gap-3">
+            <Button onClick={testGreet}>Test Tauri IPC</Button>
+            <Button variant="outline" onClick={testPlatform}>
+              Detect Platform
+            </Button>
+          </div>
 
-        <div className="flex gap-4">
-          <button
-            onClick={testGreet}
-            className="rounded-lg bg-black px-6 py-3 text-white hover:bg-zinc-800 dark:bg-zinc-50 dark:text-black dark:hover:bg-zinc-200 transition-colors"
-          >
-            Test Tauri IPC
-          </button>
-          <button
-            onClick={testPlatform}
-            className="rounded-lg border border-zinc-300 px-6 py-3 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900 transition-colors"
-          >
-            Detect Platform
-          </button>
-        </div>
-
-        {greeting && (
-          <p className="text-green-600 dark:text-green-400 text-lg">{greeting}</p>
-        )}
-        {platform && (
-          <p className="text-blue-600 dark:text-blue-400 text-lg">
-            Platform: {platform}
-          </p>
-        )}
-      </main>
+          {greeting && (
+            <p className="text-sm text-green-600 dark:text-green-400">
+              {greeting}
+            </p>
+          )}
+          {platform && (
+            <Badge variant="secondary">Platform: {platform}</Badge>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
