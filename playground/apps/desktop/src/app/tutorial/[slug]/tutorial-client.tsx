@@ -7,9 +7,16 @@ import {
   SidebarTrigger,
   Badge,
 } from "@innate/ui";
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@innate/ui";
 import { ArrowLeft, BookOpen } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { TutorialMarkdown } from "@/components/tutorial/tutorial-markdown";
+import { TerminalPanel } from "@/components/tutorial/terminal-panel";
+import { TerminalProvider, useTerminal } from "@/components/tutorial/terminal-context";
 
 interface TutorialMeta {
   title: string;
@@ -17,10 +24,19 @@ interface TutorialMeta {
   tag: string;
 }
 
-export function TutorialPageClient({ slug, meta }: { slug: string; meta: TutorialMeta }) {
+export function TutorialPageClient({ meta }: { meta: TutorialMeta }) {
+  return (
+    <TerminalProvider>
+      <TutorialPageInner meta={meta} />
+    </TerminalProvider>
+  );
+}
+
+function TutorialPageInner({ meta }: { meta: TutorialMeta }) {
   const router = useRouter();
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const { pendingCommand, sendCommand } = useTerminal();
 
   useEffect(() => {
     async function load() {
@@ -42,6 +58,8 @@ export function TutorialPageClient({ slug, meta }: { slug: string; meta: Tutoria
     load();
   }, [meta]);
 
+  const commandForTerminal = pendingCommand ? pendingCommand.split("__")[0] : null;
+
   return (
     <div className="flex flex-col h-full">
       <header className="flex items-center gap-3 border-b px-4 py-3">
@@ -53,18 +71,27 @@ export function TutorialPageClient({ slug, meta }: { slug: string; meta: Tutoria
         <BookOpen className="size-5" />
         <h1 className="text-lg font-semibold">{meta.title}</h1>
         <Badge variant="outline" className="text-xs">{meta.tag}</Badge>
-        <Badge variant="secondary" className="text-xs">方案一: ReactMarkdown</Badge>
       </header>
 
-      <div className="flex-1 overflow-auto">
-        <div className="mx-auto max-w-3xl px-6 py-8">
-          {loading ? (
-            <div className="text-center text-muted-foreground py-12">加载中...</div>
-          ) : content ? (
-            <TutorialMarkdown content={content} />
-          ) : null}
-        </div>
-      </div>
+      <ResizablePanelGroup orientation="horizontal" className="flex-1">
+        <ResizablePanel defaultSize={55} minSize={30}>
+          <div className="h-full overflow-auto">
+            <div className="mx-auto max-w-3xl px-6 py-8">
+              {loading ? (
+                <div className="text-center text-muted-foreground py-12">加载中...</div>
+              ) : content ? (
+                <TutorialMarkdown content={content} onRunCommand={sendCommand} />
+              ) : null}
+            </div>
+          </div>
+        </ResizablePanel>
+
+        <ResizableHandle withHandle />
+
+        <ResizablePanel defaultSize={45} minSize={25}>
+          <TerminalPanel pendingCommand={commandForTerminal} />
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
   );
 }

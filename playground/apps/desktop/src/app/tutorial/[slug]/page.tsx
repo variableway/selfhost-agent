@@ -26,5 +26,5 @@ async function TutorialPageClientWrapper({ params }: { params: Promise<{ slug: s
   const { slug } = await params;
   const meta = tutorialMeta[slug];
   if (!meta) notFound();
-  return <TutorialPageClient slug={slug} meta={meta} />;
+  return <TutorialPageClient meta={meta} />;
 }

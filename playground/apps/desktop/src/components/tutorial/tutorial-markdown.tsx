@@ -2,47 +2,60 @@
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { RunButton } from "./run-button";
+import { Play } from "lucide-react";
 
-function CodeBlock({
-  className,
-  children,
+function ClickableCodeBlock({
+  code,
+  onRun,
 }: {
-  className?: string;
-  children?: React.ReactNode;
+  code: string;
+  onRun: (command: string) => void;
 }) {
-  const match = /language-(\w+)/.exec(className || "");
-  const lang = match ? match[1] : null;
-  const code = String(children).replace(/\n$/, "");
-
-  const isRunnable = lang === "bash" || lang === "sh" || lang === "shell" || lang === "powershell" || lang === "zsh";
-
-  if (isRunnable && code.trim()) {
-    const lines = code.split("\n").filter((line) => line.trim() !== "");
-    return (
-      <div className="my-3 space-y-1">
-        {lines.map((line, i) => (
-          <RunButton key={i} command={line.replace(/^\$\s*/, "")} />
-        ))}
-      </div>
-    );
-  }
+  const lines = code.split("\n").filter((l) => l.trim() !== "");
 
   return (
-    <div className="my-3 rounded-md border bg-muted/50 overflow-hidden">
-      {lang && (
-        <div className="border-b bg-muted px-3 py-1 text-xs text-muted-foreground font-mono">
-          {lang}
-        </div>
-      )}
-      <pre className="p-3 overflow-x-auto text-sm">
-        <code>{code}</code>
-      </pre>
+    <div className="my-3 rounded-md border overflow-hidden bg-muted/30 group">
+      <div className="border-b bg-muted/60 px-3 py-1 flex items-center justify-between">
+        <span className="text-xs text-muted-foreground font-mono">bash</span>
+        <button
+          onClick={() => {
+            lines.forEach((line) => {
+              const cmd = line.replace(/^\$\s*/, "");
+              if (cmd) onRun(cmd);
+            });
+          }}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-green-600 dark:hover:text-green-400 transition-colors px-2 py-0.5 rounded hover:bg-green-500/10"
+        >
+          <Play className="size-3" />
+          运行全部
+        </button>
+      </div>
+      <div className="divide-y divide-border/50">
+        {lines.map((line, i) => {
+          const cmd = line.replace(/^\$\s*/, "");
+          return (
+            <div
+              key={i}
+              onClick={() => cmd && onRun(cmd)}
+              className="flex items-center gap-2 px-3 py-1.5 hover:bg-green-500/5 cursor-pointer transition-colors group/code"
+            >
+              <Play className="size-2.5 text-muted-foreground opacity-0 group-hover/code:opacity-100 transition-opacity text-green-500 shrink-0" />
+              <code className="text-sm font-mono flex-1 break-all">{cmd}</code>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
 
-export function TutorialMarkdown({ content }: { content: string }) {
+export function TutorialMarkdown({
+  content,
+  onRunCommand,
+}: {
+  content: string;
+  onRunCommand: (command: string) => void;
+}) {
   return (
     <div className="prose prose-neutral dark:prose-invert max-w-none">
       <ReactMarkdown
@@ -51,7 +64,33 @@ export function TutorialMarkdown({ content }: { content: string }) {
           code({ className, children, ...props }) {
             const isBlock = (children as string)?.includes("\n") || className;
             if (isBlock) {
-              return <CodeBlock className={className}>{children}</CodeBlock>;
+              const match = /language-(\w+)/.exec(className || "");
+              const lang = match ? match[1] : null;
+              const code = String(children).replace(/\n$/, "");
+              const isRunnable =
+                lang === "bash" ||
+                lang === "sh" ||
+                lang === "shell" ||
+                lang === "zsh";
+
+              if (isRunnable && code.trim()) {
+                return (
+                  <ClickableCodeBlock code={code} onRun={onRunCommand} />
+                );
+              }
+
+              return (
+                <div className="my-3 rounded-md border bg-muted/50 overflow-hidden">
+                  {lang && (
+                    <div className="border-b bg-muted px-3 py-1 text-xs text-muted-foreground font-mono">
+                      {lang}
+                    </div>
+                  )}
+                  <pre className="p-3 overflow-x-auto text-sm">
+                    <code>{code}</code>
+                  </pre>
+                </div>
+              );
             }
             return (
               <code
