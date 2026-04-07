@@ -1,4 +1,5 @@
-apps/
+# Legacy apps directory (not the monorepo apps)
+# innate-next-mono/apps/ is tracked by git
 # Java
 *.class
 *.jar
