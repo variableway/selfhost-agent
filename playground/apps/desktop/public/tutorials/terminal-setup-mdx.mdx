@@ -1,0 +1,95 @@
+# Mac Terminal工具安装指南
+
+> 适用人群: 初级用户 - 零基础或刚接触AI开发
+> 
+> **本教程使用 MDX 方案渲染** — bash 代码块旁边有独立的运行按钮，你也可以在 Markdown 中直接使用 `<RunButton>` 组件。
+
+## 前置要求
+
+### 安装 Homebrew (Mac包管理器)
+
+Homebrew是Mac上最流行的包管理器，用于安装各种开发工具。
+
+**安装命令**:
+
+<RunButton command={'/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'} />
+
+**验证安装**:
+
+<RunButton command="brew --version" />
+
+---
+
+## 推荐的三个Terminal工具
+
+### 1. Warp (推荐指数: ⭐⭐⭐⭐⭐)
+
+**简介**: AI驱动的现代化终端，最适合新手和AI开发者
+
+**安装**:
+
+<RunButton command="brew install --cask warp" />
+
+**常用快捷键**:
+- `Cmd+D`: 垂直分屏
+- `Cmd+Shift+D`: 水平分屏
+- `Ctrl+Space`: AI命令补全
+
+---
+
+### 2. iTerm2 (推荐指数: ⭐⭐⭐⭐)
+
+**简介**: Mac上功能强大的经典终端替代品
+
+**安装**:
+
+<RunButton command="brew install --cask iterm2" />
+
+**常用功能**:
+- `Cmd+D`: 垂直分屏
+- `Cmd+Shift+D`: 水平分屏
+- `Cmd+;`: 自动补全
+
+---
+
+### 3. Alacritty (推荐指数: ⭐⭐⭐⭐)
+
+**简介**: 高性能GPU加速终端，适合追求速度的用户
+
+**安装**:
+
+<RunButton command="brew install --cask alacritty" />
+
+---
+
+## Shell 配置
+
+### 安装 Oh My Zsh
+
+<RunButton command={'sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"'} />
+
+### 实用工具安装
+
+<RunButton command="brew install tmux tree htop fzf bat ripgrep" />
+
+---
+
+## 验证所有工具
+
+逐个检查是否安装成功：
+
+<RunButton command="brew --version" />
+<RunButton command="zsh --version" />
+<RunButton command="tmux -V" />
+<RunButton command="fzf --version" />
+<RunButton command="bat --version" />
+<RunButton command="rg --version" />
+
+---
+
+## 小结
+
+至此，你的 Mac 终端环境已配置完毕！安装了：
+- ✅ Terminal 工具 (Warp / iTerm2 / Alacritty)
+- ✅ Shell 增强 (Zsh + Oh My Zsh)
+- ✅ 实用工具 (tmux, fzf, bat, ripgrep 等)

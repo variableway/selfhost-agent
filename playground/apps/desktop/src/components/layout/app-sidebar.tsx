@@ -9,6 +9,8 @@ import {
   Terminal,
   ChevronUp,
   BookOpen,
+  FileCode2,
+  FileText,
 } from "lucide-react";
 import {
   Sidebar,
@@ -36,9 +38,16 @@ const navItems = [
 
 const tutorialGroups = [
   {
-    label: "入门",
+    label: "方案一: ReactMarkdown",
     items: [
-      { title: "终端环境配置", href: "/tutorial/terminal-setup", icon: Terminal },
+      { title: "终端环境配置", href: "/tutorial/terminal-setup", icon: FileText },
+      { title: "命令行入门", href: "/tutorial/cmd-basics", icon: FileText },
+    ],
+  },
+  {
+    label: "方案二: MDX",
+    items: [
+      { title: "终端环境配置 (MDX)", href: "/tutorial-mdx/terminal-setup", icon: FileCode2 },
     ],
   },
 ];
@@ -90,7 +99,6 @@ export function AppSidebar() {
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
-                    asChild
                     isActive={pathname === item.href}
                     tooltip={item.title}
                     onClick={() => router.push(item.href)}
@@ -115,7 +123,6 @@ export function AppSidebar() {
                 group.items.map((item) => (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
-                      asChild
                       isActive={pathname === item.href}
                       tooltip={item.title}
                       onClick={() => router.push(item.href)}

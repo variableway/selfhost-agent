@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -13,21 +13,19 @@ import {
   SidebarTrigger,
 } from "@innate/ui";
 import { Settings, Monitor, KeyRound, Info } from "lucide-react";
-import { invoke } from "@tauri-apps/api/core";
-import { isTauri } from "@/lib/tauri";
 
 export default function SettingsPage() {
   const [platform, setPlatform] = useState("detecting...");
 
-  useState(() => {
-    if (!isTauri()) {
+  useEffect(() => {
+    if ("__TAURI_INTERNALS__" in window) {
+      import("@tauri-apps/api/core").then(({ invoke }) => {
+        invoke<string>("get_platform").then(setPlatform).catch(() => setPlatform("unknown"));
+      });
+    } else {
       setPlatform("web (no Tauri)");
-      return;
     }
-    invoke<string>("get_platform")
-      .then((p) => setPlatform(p))
-      .catch(() => setPlatform("unknown"));
-  });
+  }, []);
 
   const platformIcon =
     platform.includes("macos") ? "🍎" :
@@ -45,7 +43,6 @@ export default function SettingsPage() {
 
       <div className="flex-1 overflow-auto p-6">
         <div className="mx-auto max-w-2xl space-y-6">
-          {/* Environment Info */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
@@ -72,7 +69,6 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          {/* API Keys */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
@@ -93,7 +89,6 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          {/* About */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">

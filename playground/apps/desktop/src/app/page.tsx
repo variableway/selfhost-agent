@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import {
   Button,
   Card,
@@ -47,8 +46,13 @@ export default function Home() {
   const [greeting, setGreeting] = useState("");
 
   async function testTauri() {
-    const result = await invoke<string>("greet", { name: "Developer" });
-    setGreeting(result);
+    if ("__TAURI_INTERNALS__" in window) {
+      const { invoke } = await import("@tauri-apps/api/core");
+      const result = await invoke<string>("greet", { name: "Developer" });
+      setGreeting(result);
+    } else {
+      setGreeting("Tauri not available — running in web mode");
+    }
   }
 
   const totalSkills = skillCategories.reduce((sum, cat) => sum + cat.skills.length, 0);

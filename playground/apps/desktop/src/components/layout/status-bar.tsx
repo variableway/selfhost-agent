@@ -1,20 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { isTauri } from "@/lib/tauri";
-import { invoke } from "@tauri-apps/api/core";
 
 export function StatusBar() {
   const [platform, setPlatform] = useState("detecting...");
 
   useEffect(() => {
-    if (!isTauri()) {
+    if ("__TAURI_INTERNALS__" in window) {
+      import("@tauri-apps/api/core").then(({ invoke }) => {
+        invoke<string>("get_platform").then(setPlatform).catch(() => setPlatform("unknown"));
+      });
+    } else {
       setPlatform("web");
-      return;
     }
-    invoke<string>("get_platform")
-      .then((p) => setPlatform(p))
-      .catch(() => setPlatform("unknown"));
   }, []);
 
   const platformIcon =
