@@ -1,4 +1,4 @@
-import { Clock, Play, CheckCircle, Circle, Terminal, BookOpen } from 'lucide-react';
+import { Clock, Play, CheckCircle, Circle, Terminal } from 'lucide-react';
 import { Tutorial } from '../../types';
 
 interface TutorialCardProps {

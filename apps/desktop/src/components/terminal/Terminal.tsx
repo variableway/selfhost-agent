@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { X, Minimize2, PanelRight, PanelBottom, Trash2, TerminalIcon, Maximize2, Command } from 'lucide-react';
+import { Minimize2, PanelRight, PanelBottom, Trash2, TerminalIcon, Command } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 
 export function Terminal() {

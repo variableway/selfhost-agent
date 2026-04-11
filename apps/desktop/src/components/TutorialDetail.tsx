@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Play, CheckCircle, Clock, BookOpen, Terminal, Copy, Check, Sparkles, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Play, CheckCircle, Clock, Terminal, Copy, Check, Sparkles, RotateCcw } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 
 interface TutorialDetailProps {
@@ -30,7 +30,7 @@ export function TutorialDetail({ tutorialId, onBack }: TutorialDetailProps) {
     );
   }
   
-  const handleRun = (code: string, id: string) => {
+  const handleRun = (code: string, _id: string) => {
     showTerminal();
     setIsExecuting(true);
     
@@ -196,7 +196,7 @@ export function TutorialDetail({ tutorialId, onBack }: TutorialDetailProps) {
                   <div 
                     className="text-text-secondary leading-relaxed"
                     dangerouslySetInnerHTML={{
-                      __html: section.content
+                      __html: (section.content || "")
                         .replace(/## (.*)/, '<h2 class="text-2xl font-bold text-text-primary mb-4 mt-8">$1</h2>')
                         .replace(/- (.*)/g, '<li class="ml-4 mb-2">$1</li>')
                         .replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 bg-bg-card rounded text-accent text-sm">$1</code>')
@@ -218,14 +218,14 @@ export function TutorialDetail({ tutorialId, onBack }: TutorialDetailProps) {
                     </div>
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => handleCopy(section.code, section.id)}
+                        onClick={() => handleCopy(section.code!, section.id!)}
                         className="p-2 text-text-muted hover:text-text-primary hover:bg-bg-tertiary rounded-lg transition-all"
                         title="复制"
                       >
                         {copiedId === section.id ? <Check size={18} className="text-success" /> : <Copy size={18} />}
                       </button>
                       <button
-                        onClick={() => handleRun(section.code, section.id)}
+                        onClick={() => handleRun(section.code!, section.id!)}
                         className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-accent to-secondary text-white font-medium rounded-xl hover:shadow-glow transition-all"
                       >
                         <Play size={16} className="fill-current" />

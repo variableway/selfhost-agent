@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Tutorial, Series, Progress, TerminalPosition } from '../types';
+import { Tutorial, Series, Progress, TerminalPosition, SeriesLesson, LessonSection } from '../types';
 
 interface AppState {
   // Data
@@ -40,7 +40,21 @@ interface AppState {
   
   // Progress Actions
   updateProgress: (progress: Progress) => void;
-  
+
+  // Lesson State (UC1)
+  lessons: SeriesLesson[];
+  currentLesson: SeriesLesson | null;
+  previewSectionIndex: number;
+
+  // Lesson Actions (UC1)
+  createLesson: (title: string, category: string, description?: string, difficulty?: 'beginner' | 'intermediate' | 'advanced') => string;
+  addSectionToLesson: (lessonId: string, section: LessonSection) => void;
+  removeSectionFromLesson: (lessonId: string, sectionId: string) => void;
+  reorderSections: (lessonId: string, sectionIds: string[]) => void;
+  deleteLesson: (lessonId: string) => void;
+  setCurrentLesson: (lesson: SeriesLesson | null) => void;
+  setPreviewSectionIndex: (index: number) => void;
+
   // Filtered Data
   getFilteredTutorials: () => Tutorial[];
   getTutorialsBySeries: (seriesId: string) => Tutorial[];
@@ -223,7 +237,70 @@ export const useAppStore = create<AppState>((set, get) => ({
       [progress.tutorialId]: progress,
     },
   })),
-  
+
+  // Lesson State
+  lessons: [],
+  currentLesson: null,
+  previewSectionIndex: 0,
+
+  // Lesson Actions
+  createLesson: (title, category, description, difficulty = 'beginner') => {
+    const id = `lesson-${Date.now()}`;
+    const now = new Date().toISOString();
+    const lesson: SeriesLesson = {
+      id,
+      title,
+      category,
+      description,
+      difficulty,
+      sections: [],
+      createdAt: now,
+      updatedAt: now,
+    };
+    set((state) => ({ lessons: [...state.lessons, lesson] }));
+    return id;
+  },
+
+  addSectionToLesson: (lessonId, section) => set((state) => ({
+    lessons: state.lessons.map((l) =>
+      l.id === lessonId
+        ? { ...l, sections: [...l.sections, section], updatedAt: new Date().toISOString() }
+        : l
+    ),
+  })),
+
+  removeSectionFromLesson: (lessonId, sectionId) => set((state) => ({
+    lessons: state.lessons.map((l) =>
+      l.id === lessonId
+        ? {
+            ...l,
+            sections: l.sections.filter((s) => s.id !== sectionId),
+            updatedAt: new Date().toISOString(),
+          }
+        : l
+    ),
+  })),
+
+  reorderSections: (lessonId, sectionIds) => set((state) => ({
+    lessons: state.lessons.map((l) => {
+      if (l.id !== lessonId) return l;
+      const reordered = sectionIds
+        .map((id, idx) => {
+          const section = l.sections.find((s) => s.id === id);
+          return section ? { ...section, order: idx } : null;
+        })
+        .filter(Boolean) as LessonSection[];
+      return { ...l, sections: reordered, updatedAt: new Date().toISOString() };
+    }),
+  })),
+
+  deleteLesson: (lessonId) => set((state) => ({
+    lessons: state.lessons.filter((l) => l.id !== lessonId),
+  })),
+
+  setCurrentLesson: (currentLesson) => set({ currentLesson }),
+  setPreviewSectionIndex: (previewSectionIndex) => set({ previewSectionIndex }),
+
   // Getters
   getFilteredTutorials: () => {
     const { tutorials, searchQuery, selectedCategory, selectedDifficulty } = get();

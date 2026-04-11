@@ -59,3 +59,25 @@ export interface Progress {
 }
 
 export type TerminalPosition = 'hidden' | 'right' | 'bottom';
+
+// UC1: Series Lesson types for file upload and management
+export interface LessonSection {
+  id: string;
+  fileName: string;
+  filePath: string;
+  content: string;       // raw markdown content
+  fileType: 'md' | 'mdx';
+  order: number;
+  createdAt: string;
+}
+
+export interface SeriesLesson {
+  id: string;
+  title: string;
+  category: string;
+  description?: string;
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  sections: LessonSection[];
+  createdAt: string;
+  updatedAt: string;
+}
