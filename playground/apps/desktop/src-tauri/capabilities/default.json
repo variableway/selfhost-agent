@@ -43,7 +43,13 @@
     "shell:allow-spawn",
     "shell:allow-kill",
     "shell:allow-stdin-write",
-    "shell:allow-open",
+    {
+      "identifier": "shell:allow-open",
+      "allow": [
+        { "url": "https://**" },
+        { "url": "http://**" }
+      ]
+    },
     {
       "identifier": "shell:allow-spawn",
       "allow": [
