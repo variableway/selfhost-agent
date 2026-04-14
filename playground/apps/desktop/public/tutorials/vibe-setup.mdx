@@ -1,0 +1,150 @@
+---
+title: Claude Code 安装与配置
+description: 安装 Claude Code CLI，配置 GitHub 认证，开始对话式编程
+difficulty: intermediate
+duration: 15
+category: ai-agent
+tags: [vibe-coding, claude, github, cli]
+series: vibe-coding
+seriesOrder: 1
+source: builtin
+---
+
+# Claude Code 安装与配置
+
+> 适用人群：有编程基础，想用 AI 提升开发效率
+> 预计时间：15 分钟
+
+把"需求 → 改代码 → 跑测试 → 提 PR"变成一次对话流程，用于远程修复问题与快速验证需求。
+
+## 1. 架构概述
+
+Vibe Coding 使用双层架构：
+
+- **OpenClaw**：消息编排——接消息、派任务、收结果、发通知
+- **Claude Code**：编码执行——理解仓库、修改代码、运行测试、提交 PR
+
+> **为什么是双层？** Claude Code 本身就是完整的编码 Agent，内置文件读写、代码搜索、Git 操作等全部能力。OpenClaw 只需安装 `claude-code` 技能作为桥接层即可。
+
+## 2. 安装核心技能
+
+### 2.1 开启代码执行权限
+
+<RunButton command="openclaw config set tools.profile coding" />
+
+### 2.2 安装安全守卫
+
+<RunButton command="clawhub install skill-vetter" />
+
+> 安装后自动生效，后续技能安装前会自动扫描安全性。
+
+### 2.3 安装 Claude Code CLI
+
+Linux（大多数服务器场景）：
+
+<RunButton command="curl -fsSL https://claude.ai/install.sh | bash" />
+
+macOS：
+
+<RunButton command="brew install --cask claude-code" />
+
+Windows PowerShell：
+
+```powershell
+irm https://claude.ai/install.ps1 | iex
+```
+
+验证安装：
+
+<RunButton command="claude --version" />
+
+### 2.4 配置 Anthropic API Key
+
+前往 [Anthropic Console](https://console.anthropic.com/) → API Keys → Create Key。
+
+<RunButton command="echo 'export ANTHROPIC_API_KEY=sk-ant-xxxxx' >> ~/.bashrc" />
+
+> API Key 只显示一次，务必立即保存。建议创建专用 Key，便于追踪用量。
+
+### 2.5 安装 claude-code 技能
+
+<RunButton command="clawhub install claude-code" />
+
+### 2.6 安装 GitHub CLI
+
+<RunButton command="brew install gh" />
+
+认证 GitHub：
+
+<RunButton command="gh auth login --with-token <<< $GITHUB_TOKEN" />
+
+### 2.7 安装 github 技能（可选，用于 PR 轮询通知）
+
+<RunButton command="clawhub install github" />
+
+## 3. 配置 GitHub 认证
+
+### 创建 Fine-grained Token
+
+1. GitHub → 头像 → **Settings** → **Developer settings** → **Personal access tokens** → **Fine-grained tokens**
+2. 设置名称（如 `openclaw-vibe-coding`）
+3. Repository access → 选择目标仓库
+4. Permissions → Repository permissions：
+   - Contents → **Read and write**
+   - Pull requests → **Read and write**
+   - Issues → **Read and write**
+   - Metadata → **Read-only**
+5. Generate token → 立即复制保存
+
+### 配置 Git 凭证
+
+```bash
+export GITHUB_TOKEN="github_pat_xxxxx"
+git config --global credential.helper store
+echo "https://your-github-id:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
+```
+
+## 4. 编写工作区规则
+
+将以下内容写入 `~/.openclaw/workspace/IDENTITY.md`：
+
+```markdown
+## 场景处理 —— 代码与 PR 类需求
+
+当用户提出涉及代码修改、提交、PR 的任务时：
+1. 确认目标仓库（从消息中提取，或询问用户）
+2. 调用 Claude Code 执行任务
+3. 创建 PR 后默认请求 @copilot 审查
+4. 完成后汇报：PR 链接 + 修改文件列表 + 修改摘要
+5. 用户确认合并时：执行 squash merge 并清理远程分支
+
+### 异常处理
+遇到失败时，先自行诊断修复，修不了再报错。
+```
+
+## 5. 服务器自检
+
+在开始前快速确认所有组件正常：
+
+<RunButton command="claude --version" />
+
+<RunButton command="gh auth status" />
+
+<RunButton command="openclaw doctor" />
+
+三个命令都通过，就可以发第一条任务了。
+
+## 完成检查
+
+- [ ] coding 工具配置档已设置
+- [ ] skill-vetter 已安装
+- [ ] Claude Code CLI 已安装
+- [ ] Anthropic API Key 已配置
+- [ ] claude-code 技能已安装
+- [ ] GitHub 认证正常
+- [ ] IDENTITY.md 已编写
+- [ ] 自检三个命令全部通过
+
+---
+
+*内容来源：[hello-claw](https://github.com/datawhalechina/hello-claw) | CC BY-NC-SA 4.0*

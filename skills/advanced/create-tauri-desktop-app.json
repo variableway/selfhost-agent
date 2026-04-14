@@ -1,0 +1,112 @@
+{
+  "id": "create-tauri-desktop-app",
+  "name": "创建 Tauri + Next.js 桌面应用",
+  "version": "1.0.0",
+  "description": "从零创建一个 Tauri 2.x + Next.js 桌面应用，包含工作区管理、终端集成、Markdown 预览、状态持久化等功能",
+  "level": "advanced",
+  "platform": ["macos", "windows", "linux"],
+  "prerequisites": [
+    "Node.js 18+ (推荐使用 fnm 安装)",
+    "pnpm 10+ (pnpm install -g pnpm)",
+    "Rust 工具链 (curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh)",
+    "基础 React/Next.js 知识",
+    "基础 Rust 知识（非必须，但推荐）"
+  ],
+  "steps": [
+    {
+      "order": 1,
+      "title": "创建 pnpm Monorepo 项目结构",
+      "description": "使用 pnpm workspace 搭建 monorepo 结构，包含 apps/desktop（Tauri 应用）和 packages/（共享包）",
+      "action": {
+        "type": "manual",
+        "documentation": "1. 创建项目根目录，添加 pnpm-workspace.yaml:\n   packages:\n     - 'apps/*'\n     - 'packages/*'\n\n2. 创建目录结构:\n   mkdir -p apps/desktop packages/ui packages/utils packages/tsconfig\n\n3. 创建根 package.json:\n   { \"name\": \"my-project\", \"private\": true, \"packageManager\": \"pnpm@10.32.1\" }"
+      }
+    },
+    {
+      "order": 2,
+      "title": "初始化 Tauri + Next.js 桌面应用",
+      "description": "在 apps/desktop 下创建 Tauri 项目并集成 Next.js 前端",
+      "action": {
+        "type": "script",
+        "command": "cd apps/desktop && pnpm init && pnpm add next react react-dom && pnpm add -D @tauri-apps/cli typescript @types/react @types/react-dom",
+        "documentation": "1. 在 apps/desktop 创建 Next.js 页面和 Tauri 配置\n2. 创建 src-tauri/ 目录，运行 pnpm tauri init\n3. 配置 tauri.conf.json 中的 beforeDevCommand 和 devUrl"
+      }
+    },
+    {
+      "order": 3,
+      "title": "配置共享 UI 包和工具包",
+      "description": "创建 packages/ui（shadcn/ui 组件库）和 packages/utils（工具函数），通过 workspace 协议引用",
+      "action": {
+        "type": "manual",
+        "documentation": "1. packages/utils: 导出 cn() 函数（clsx + tailwind-merge）\n2. packages/ui: 安装 shadcn/ui 组件，导出 Button、Card、Dialog 等\n3. packages/tsconfig: 共享 TypeScript 配置\n4. 在 desktop 的 package.json 中使用 workspace:* 引用:\n   \"@innate/ui\": \"workspace:*\",\n   \"@innate/utils\": \"workspace:*\""
+      }
+    },
+    {
+      "order": 4,
+      "title": "添加 Tauri Rust 插件依赖",
+      "description": "在 Cargo.toml 中添加文件系统、对话框、持久化存储等 Tauri 插件",
+      "action": {
+        "type": "manual",
+        "documentation": "在 src-tauri/Cargo.toml 的 [dependencies] 中添加:\n\n  tauri-plugin-log = \"2\"          # 日志\n  tauri-plugin-shell = \"2\"        # Shell 命令执行\n  tauri-plugin-dialog = \"2\"       # 文件选择对话框\n  tauri-plugin-fs = \"2\"           # 文件系统读写\n  tauri-plugin-store = \"2\"        # 持久化键值存储\n\n并在 src-tauri/src/lib.rs 中注册:\n  .plugin(tauri_plugin_shell::init())\n  .plugin(tauri_plugin_dialog::init())\n  .plugin(tauri_plugin_fs::init())\n  .plugin(tauri_plugin_store::Builder::default().build())\n\n在 capabilities/default.json 中添加权限:\n  \"dialog:default\", \"dialog:allow-open\",\n  \"fs:default\", \"fs:allow-read-dir\", \"fs:allow-read-file\",\n  \"fs:allow-mkdir\", \"fs:allow-exists\",\n  \"store:default\""
+      }
+    },
+    {
+      "order": 5,
+      "title": "实现应用布局框架",
+      "description": "创建 App Shell 布局：MenuBar（固定顶部）+ Sidebar + 内容区 + Terminal 面板",
+      "action": {
+        "type": "manual",
+        "documentation": "关键组件:\n- app-shell.tsx: SidebarProvider + MenuBar + SidebarInset + TerminalPanel + StatusBar\n- menu-bar.tsx: 导航标签 + 搜索 + 主题切换\n- app-sidebar.tsx: 侧边栏导航\n- terminal-panel.tsx: xterm.js 终端，连接 PTY 后端\n\n布局关键点:\n- SidebarProvider 使用 h-svh overflow-hidden（非 min-h-svh）确保 MenuBar 固定\n- 内容区 flex-1 overflow-auto 实现独立滚动\n- TerminalPanel 支持右侧/底部两种位置"
+      }
+    },
+    {
+      "order": 6,
+      "title": "实现 PTY 终端后端",
+      "description": "在 Rust 端创建持久化 PTY 会话，支持命令执行和输出流",
+      "action": {
+        "type": "manual",
+        "documentation": "在 src-tauri/src/lib.rs 中:\n1. 使用 portable-pty 创建 PTY 会话\n2. 注册 pty_write 和 pty_resize 命令\n3. 通过 tauri event 系统将 PTY 输出流式传输到前端\n4. 前端 terminal-panel.tsx 使用 xterm.js 渲染\n\n关键代码:\n- pty_write: 将数据写入 PTY master\n- pty_resize: 调整终端大小\n- listen('pty-output'): 接收 PTY 输出并写入 xterm"
+      }
+    },
+    {
+      "order": 7,
+      "title": "实现工作区管理",
+      "description": "创建工作区 CRUD 功能，包括文件夹选择、目录创建、右键菜单（删除/设为默认）",
+      "action": {
+        "type": "manual",
+        "documentation": "功能:\n1. 使用 @tauri-apps/plugin-dialog 选择文件夹\n2. 创建时自动生成 skills/、Apps/、KM/、lessons/ 子目录\n3. 文件树浏览（readDir + 递归读取）\n4. 文件内容预览（readFile）\n5. Markdown 文件渲染（react-markdown + remark-gfm + rehype-highlight）\n6. 右键上下文菜单：删除工作区、设为默认工作区\n\nStore 状态:\n- workspaces: Workspace[]\n- defaultWorkspaceId: string | null\n- currentWorkspace: Workspace | null\n- fileTree: FileNode[]"
+      }
+    },
+    {
+      "order": 8,
+      "title": "实现状态持久化",
+      "description": "使用 tauri-plugin-store + Zustand persist 中间件持久化工作区和进度数据",
+      "action": {
+        "type": "manual",
+        "documentation": "1. 创建 src/lib/tauri-storage.ts:\n   - Zustand PersistStorage 适配器\n   - Tauri 环境: 使用 @tauri-apps/plugin-store\n   - Web 环境: 降级为 localStorage\n\n2. 在 useAppStore.ts 中使用 persist 中间件:\n   persist(\n     (set, get) => ({ /* store */ }),\n     {\n       name: 'app-storage',\n       storage: tauriStorage,\n       partialize: (state) => ({\n         workspaces: state.workspaces,\n         progress: state.progress,\n         defaultWorkspaceId: state.defaultWorkspaceId,\n       }),\n     }\n   )\n\n注意: partialize 只持久化需要的数据，终端状态和 UI 状态不持久化"
+      }
+    },
+    {
+      "order": 9,
+      "title": "添加教程系统",
+      "description": "实现可执行教程系统，教程中的命令可以在终端中运行",
+      "action": {
+        "type": "manual",
+        "documentation": "关键功能:\n1. 教程列表页（首页 + 系列页）\n2. 教程详情页，包含可执行代码块\n3. 点击\"运行\"按钮通过 executeCommandInTerminal() 在 PTY 终端执行\n4. 进度追踪（updateProgress）并持久化\n5. 支持 MDX 格式教程内容\n\n数据流:\n  点击运行 → executeCommandInTerminal() → writeToPty() → PTY 后端\n  → pty-output event → TerminalPanel (xterm.js)"
+      }
+    },
+    {
+      "order": 10,
+      "title": "验证构建和运行",
+      "description": "验证 Web 模式和 Tauri 桌面模式都能正常启动",
+      "action": {
+        "type": "verification",
+        "command": "cd playground && pnpm install && pnpm dev",
+        "expected_output": "Next.js 16.x (Turbopack) ✓ Ready",
+        "documentation": "验证步骤:\n1. pnpm install 安装依赖\n2. pnpm dev 启动 Web 模式 (localhost:3000)\n3. cargo check 验证 Rust 编译\n4. pnpm tauri dev 启动桌面模式\n\n常见问题:\n- 端口冲突: 修改 tauri.conf.json 中的 port\n- Module not found: 运行 pnpm install\n- Rust 编译错误: cargo check 查看具体错误"
+      }
+    }
+  ],
+  "estimated_time": "4-8小时",
+  "tags": ["tauri", "next.js", "desktop", "react", "rust", "monorepo", "terminal", "workspace"]
+}

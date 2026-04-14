@@ -29,7 +29,8 @@ export function MenuBar() {
 
   const getActiveTab = (): Tab => {
     if (pathname === "/") return "home";
-    if (pathname.startsWith("/tutorial") || pathname.startsWith("/tutorial-mdx")) return "tutorials";
+    if (pathname === "/tutorials") return "tutorials";
+    if (pathname.startsWith("/tutorial")) return "tutorials";
     if (pathname.startsWith("/series")) return "series";
     if (pathname.startsWith("/admin")) return "admin";
     if (pathname.startsWith("/settings")) return "settings";

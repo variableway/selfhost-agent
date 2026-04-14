@@ -1,0 +1,79 @@
+---
+title: Git 基础
+description: 学习 Git 版本控制的基本操作
+difficulty: beginner
+duration: 15
+category: dev-tools
+tags: [git, version-control]
+series: git-fundamentals
+seriesOrder: 1
+source: builtin
+---
+
+# Git 基础
+
+> 适用人群：开发初学者
+> 预计时间：15 分钟
+
+## 什么是 Git？
+
+Git 是最流行的分布式版本控制系统，用于跟踪代码变更、协作开发和管理项目历史。
+
+## 安装 Git
+
+macOS 通常自带 Git，但建议通过 Homebrew 安装最新版本：
+
+<RunButton command="brew install git" />
+
+验证安装：
+
+<RunButton command="git --version" />
+
+## 配置用户信息
+
+设置你的用户名和邮箱（替换为你的信息）：
+
+<RunButton command='git config --global user.name "Your Name"' />
+
+<RunButton command='git config --global user.email "you@example.com"' />
+
+## 基础命令
+
+### 创建仓库
+
+```bash
+git init           # 在当前目录初始化新仓库
+git clone <url>    # 克隆远程仓库
+```
+
+### 日常操作
+
+```bash
+git status         # 查看当前状态
+git add .          # 暂存所有更改
+git add file.ts    # 暂存指定文件
+git commit -m "消息"  # 提交更改
+```
+
+### 查看历史
+
+```bash
+git log            # 查看提交历史
+git log --oneline  # 简洁模式
+git diff           # 查看未暂存的更改
+```
+
+### 分支操作
+
+```bash
+git branch              # 列出分支
+git branch feature-x    # 创建新分支
+git checkout feature-x  # 切换分支
+git merge feature-x     # 合并分支
+```
+
+## 完成检查
+
+- [ ] Git 已安装
+- [ ] 用户名和邮箱已配置
+- [ ] 了解 init、add、commit、status 命令

@@ -1,0 +1,149 @@
+---
+title: 初始配置向导
+description: 配置模型、渠道和工作区，让龙虾开口说话
+difficulty: beginner
+duration: 10
+category: ai-agent
+tags: [openclaw, ai, 配置, 模型]
+series: openclaw-quickstart
+seriesOrder: 3
+source: builtin
+---
+
+# 初始配置向导
+
+> 适用人群：已安装 OpenClaw 的用户
+> 预计时间：10 分钟
+
+跑完本章，龙虾就能开口说话了。
+
+## 0. 两条路径，选一条
+
+Onboarding（配置向导）帮你告诉龙虾三件事：用哪个模型、通过哪个渠道联系你、在哪里工作。
+
+| 路径 | 适用场景 | 平台 |
+|------|---------|------|
+| **CLI 配置向导** | 需要完全控制、远程服务器、自动化脚本 | macOS / Linux / Windows |
+| **macOS 应用引导** | 希望图形化引导、需要语音/摄像头等原生权限 | 仅 macOS |
+
+## 1. CLI 配置向导
+
+### 启动向导
+
+<RunButton command="openclaw onboard" />
+
+> 想同时安装后台服务？加 `--install-daemon` 一步到位
+
+### QuickStart vs Advanced
+
+| 选项 | 自动配置内容 | 适合谁 |
+|------|------------|--------|
+| **QuickStart** | 本地 Gateway + 默认工作区 + 端口 18789 + Token 认证 | 第一次用，想尽快聊天 |
+| **Advanced** | 所有选项都可自定义 | 需要远程部署、特殊安全策略 |
+
+> QuickStart 模式自动应用默认值：本地 Gateway、端口 18789、Token 认证、coding 工具策略。
+
+### 向导的六个步骤
+
+**步骤一：模型与认证**
+
+选择模型提供商，粘贴 API Key。详见 [模型管理教程](/tutorial-mdx/openclaw-manual)。
+
+**步骤二：工作区**
+
+设置龙虾的工作目录（默认 `~/.openclaw/workspace/`），存放 IDENTITY.md、MEMORY.md 等文件。
+
+**步骤三：Gateway 配置**
+
+设置端口（默认 18789）、绑定地址（默认仅本机）和认证方式。
+
+**步骤四：渠道接入**
+
+选择聊天平台（WhatsApp、Telegram、Discord 等）。可以跳过，后续用命令随时添加。
+
+**步骤五：后台服务**
+
+安装后台服务，开机自动启动 Gateway。macOS 用 LaunchAgent，Linux/WSL2 用 systemd。
+
+**步骤六：健康检查与技能安装**
+
+启动 Gateway、验证运行状态，安装推荐技能。
+
+### Web 搜索配置
+
+让龙虾能上网搜索，需要配置搜索提供商（Perplexity / Brave / Gemini / Grok / Kimi）。
+
+<RunButton command="openclaw configure --section web" />
+
+## 2. macOS 应用引导
+
+首次启动 OpenClaw.app 时，会自动进入图形化引导：
+
+| 步骤 | 内容 |
+|------|------|
+| ① macOS 安全警告 | 点击「允许」 |
+| ② 本地网络发现 | 允许查找本地网络设备 |
+| ③ 安全须知 | 阅读信任模型说明 |
+| ④ 选择 Gateway 位置 | 本机 / 远程 / 稍后配置 |
+| ⑤ 系统权限申请 | 逐项授权（可跳过不需要的） |
+| ⑥ 安装 CLI（可选） | 安装 `openclaw` 命令行工具 |
+| ⑦ Onboarding 对话 | 龙虾自我介绍 + 引导下一步 |
+
+## 3. 自定义模型提供商
+
+向导列表里没有你的提供商？选 **Custom Provider**，依次填写：
+
+| 步骤 | 内容 | 示例 |
+|------|------|------|
+| 1. 兼容类型 | OpenAI / Anthropic / 自动检测 | OpenAI-compatible |
+| 2. Base URL | 提供商的 API 地址 | `https://api.mycompany.com/v1` |
+| 3. API Key | 认证密钥 | `sk-custom-...` |
+| 4. Model ID | 模型标识符 | `gpt-4o` |
+| 5. 别名（可选） | 方便记忆的短名称 | `company-gpt` |
+| 6. Endpoint ID | 区分多个自定义端点 | `mycompany` |
+
+## 4. 多智能体配置
+
+OpenClaw 支持多个独立智能体，每个有自己的工作区、会话和渠道绑定。
+
+<RunButton command="openclaw agents add my-agent" />
+
+## 5. 重新配置与维护
+
+重新运行向导（不覆盖现有配置）：
+
+<RunButton command="openclaw configure" />
+
+重置配置：
+
+<RunButton command="openclaw onboard --reset" />
+
+> ⚠️ `--reset` 会清除现有配置。只想改某项设置，用 `openclaw configure` 更安全。
+
+配置异常时运行诊断：
+
+<RunButton command="openclaw doctor" />
+
+## 常见问题
+
+**Q：向导跑完，怎么马上开始聊天？**
+
+<RunButton command="openclaw tui" />
+
+<RunButton command="openclaw dashboard" />
+
+**Q：提供商不在列表里？** 选 **Custom Provider**，填入 API 地址和密钥。
+
+**Q：重新运行向导会覆盖现有配置吗？** 不会，除非传入 `--reset` 参数。
+
+## 完成检查
+
+- [ ] 配置向导已完成
+- [ ] 模型提供商已配置
+- [ ] 工作区已创建
+- [ ] Gateway 运行正常
+- [ ] 能通过 `openclaw tui` 对话
+
+---
+
+*内容来源：[hello-claw](https://github.com/datawhalechina/hello-claw) | CC BY-NC-SA 4.0*

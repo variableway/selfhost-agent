@@ -5,7 +5,7 @@ import { SidebarProvider, SidebarInset } from "@innate/ui";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { MenuBar } from "@/components/layout/menu-bar";
 import { StatusBar } from "@/components/layout/status-bar";
-import { TerminalView } from "@/components/terminal-view";
+import { TerminalPanel } from "@/components/terminal-panel";
 import { useAppStore } from "@/store/useAppStore";
 
 function AppShellContent({ children }: { children: ReactNode }) {
@@ -42,13 +42,13 @@ function AppShellContent({ children }: { children: ReactNode }) {
 
           {/* Terminal - Right Side */}
           {terminalVisible && terminalPosition === "right" && (
-            <TerminalView />
+            <TerminalPanel />
           )}
         </div>
 
         {/* Terminal - Bottom */}
         {terminalVisible && terminalPosition === "bottom" && (
-          <TerminalView />
+          <TerminalPanel />
         )}
 
         <StatusBar />

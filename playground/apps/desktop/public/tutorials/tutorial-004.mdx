@@ -1,0 +1,64 @@
+---
+title: ls 命令详解
+description: 掌握目录列表命令
+difficulty: beginner
+duration: 5
+category: terminal
+tags: [terminal, bash, ls]
+series: terminal-basics
+seriesOrder: 1
+source: builtin
+---
+
+# ls 命令详解
+
+> 预计时间：5 分钟
+
+`ls` 是最常用的文件管理命令，用于列出目录内容。
+
+## 基本用法
+
+列出当前目录的文件和文件夹：
+
+<RunButton command="ls" />
+
+## 显示详细信息
+
+使用 `-l` 参数显示文件权限、大小、修改时间等：
+
+<RunButton command="ls -l" />
+
+## 显示隐藏文件
+
+使用 `-a` 参数显示以 `.` 开头的隐藏文件：
+
+<RunButton command="ls -la" />
+
+## 按时间排序
+
+使用 `-t` 参数按修改时间排序（最新在前）：
+
+<RunButton command="ls -lt" />
+
+## 按文件大小排序
+
+<RunButton command="ls -lhS" />
+
+## 常用参数速查
+
+| 参数 | 说明 |
+|------|------|
+| `-l` | 长格式显示（权限、大小、时间） |
+| `-a` | 显示隐藏文件 |
+| `-h` | 人类可读的文件大小 |
+| `-R` | 递归列出子目录 |
+| `-t` | 按修改时间排序 |
+| `-S` | 按文件大小排序 |
+
+> 组合使用：`ls -lah` = 长格式 + 隐藏文件 + 人类可读
+
+## 完成检查
+
+- [ ] 了解 `ls` 基本用法
+- [ ] 会使用 `-l`、`-a`、`-h` 参数
+- [ ] 会组合参数使用

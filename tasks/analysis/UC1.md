@@ -35,6 +35,5 @@ verification:
    - right side: the selected file content or a list of files in the selected folder
 
 
-## Task 3: Upload Markdown/Mdx File for lessons
 
 

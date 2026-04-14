@@ -1,0 +1,65 @@
+---
+title: cd 和 pwd 命令
+description: 学习目录导航
+difficulty: beginner
+duration: 5
+category: terminal
+tags: [terminal, bash, cd, pwd]
+series: terminal-basics
+seriesOrder: 2
+source: builtin
+---
+
+# cd 和 pwd 命令
+
+> 预计时间：5 分钟
+
+`cd`（Change Directory）用于切换目录，`pwd`（Print Working Directory）用于显示当前所在目录。
+
+## 显示当前目录
+
+查看你当前所在的目录路径：
+
+<RunButton command="pwd" />
+
+## 切换到主目录
+
+使用 `cd ~` 回到用户主目录：
+
+<RunButton command="cd ~ && pwd" />
+
+## 切换到上级目录
+
+使用 `..` 返回上一级目录：
+
+<RunButton command="cd .. && pwd" />
+
+## 切换到绝对路径
+
+使用绝对路径直接跳转：
+
+<RunButton command="cd /tmp && pwd" />
+
+## 返回上一次的目录
+
+使用 `cd -` 返回上一次所在的目录：
+
+<RunButton command="cd -" />
+
+## 常用技巧速查
+
+| 命令 | 说明 |
+|------|------|
+| `cd ~` | 回到主目录 |
+| `cd -` | 返回上一次目录 |
+| `cd ..` | 返回上一级 |
+| `cd ../..` | 返回上两级 |
+| `cd /path/to/dir` | 使用绝对路径 |
+
+> `cd` 和 `pwd` 配合 `ls` 使用，你可以在文件系统中自由穿梭。
+
+## 完成检查
+
+- [ ] 了解 `pwd` 显示当前目录
+- [ ] 会使用 `cd` 切换目录
+- [ ] 会使用 `~`、`..`、`-` 快捷方式

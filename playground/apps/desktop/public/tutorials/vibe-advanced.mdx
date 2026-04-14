@@ -1,0 +1,190 @@
+---
+title: 高级场景与优化
+description: 多文件重构、性能优化和安全最佳实践
+difficulty: advanced
+duration: 20
+category: ai-agent
+tags: [vibe-coding, claude, 重构, 安全]
+series: vibe-coding
+seriesOrder: 3
+source: builtin
+---
+
+# 高级场景与优化
+
+> 适用人群：已跑通 Vibe Coding 基础流程的用户
+> 预计时间：20 分钟
+
+从"能用"到"好用"——提升代码质量、优化性能、加固安全。
+
+## 1. 用 CLAUDE.md 提升代码质量
+
+在目标仓库根目录创建 `CLAUDE.md` 文件。Claude Code 每次启动时会自动读取，作为编码规范：
+
+```markdown
+# 项目规范
+
+## 代码风格
+- 使用 TypeScript strict mode
+- 函数命名：camelCase
+- 文件命名：kebab-case
+- 每个函数必须有 JSDoc 注释
+- 禁止使用 any 类型
+
+## Git 规范
+- commit message 遵循 Conventional Commits
+- 分支命名：openclaw/feat-xxx、openclaw/fix-xxx
+- PR 必须包含修改说明和测试计划
+
+## 测试要求
+- 新功能必须附带单元测试
+- 测试覆盖率不低于 80%
+- 使用 Vitest 作为测试框架
+```
+
+> **CLAUDE.md vs IDENTITY.md**：`CLAUDE.md` 是 Claude Code 原生支持的项目规范（跟着代码走），`IDENTITY.md` 是 OpenClaw 工作区文件（跟着 Agent 走）。两者可以配合使用。
+
+## 2. 多仓库管理
+
+如果你维护多个仓库，可以在聊天时指定：
+
+```
+请在 frontend-app 仓库中修复 Header 组件的样式问题：
+导航栏在移动端被截断，需要添加 overflow-x: auto
+
+同时在 backend-api 仓库中添加对应的 /api/layout-config 端点，
+返回移动端专属的导航配置
+```
+
+OpenClaw 会根据仓库名在 `/workspace/repos/` 下找到对应目录，分别调用 Claude Code。
+
+## 3. 定时代码巡检
+
+配置定时任务，每周自动扫描代码质量：
+
+```bash
+openclaw cron add --name "每周代码巡检" --cron "0 9 * * 1" --message "请对仓库 your-repo 执行巡检：1) 搜索所有 TODO 和 FIXME 2) 检查过期依赖 3) 统计未关闭 Issue 4) 推送报告到飞书。发现高优先级问题自动创建 Issue。"
+```
+
+## 4. 全自动审查闭环（进阶）
+
+```
+请启用 Vibe Coding 全自动模式：
+- Copilot 审查通过 → 自动合并 PR
+- Copilot 要求修改 → 调用 Claude Code 自动修复 → 更新 PR
+- 超过 3 轮仍未通过 → 停止，推送飞书请求人工介入
+- 每次操作都在飞书通知
+```
+
+> **警告**：全自动模式适合低风险仓库（文档、个人项目）。生产仓库务必使用"人在回路"模式。
+
+## 5. 性能优化
+
+### 优化 1：指定文件范围
+
+```
+请只修改 src/api/user-handler.ts 和对应的测试文件，
+不要扫描整个仓库（除非必要）
+```
+
+明确指定范围可以减少 token 消耗，加快响应。
+
+### 优化 2：确认使用 coding 配置档
+
+<RunButton command="openclaw config get tools.profile" />
+
+`coding` 比 `full` 少加载约 30% 的工具描述，决策更快更准。
+
+### 优化 3：PR 模板减少审查往返
+
+在仓库创建 `.github/pull_request_template.md`：
+
+```markdown
+## 变更说明
+<!-- 一句话描述这个 PR 做了什么 -->
+
+## 修改清单
+<!-- 列出所有修改的文件 -->
+
+## 测试计划
+- [ ] 单元测试通过
+- [ ] 手动验证功能正常
+```
+
+Claude Code 创建 PR 时会自动填写这个模板。
+
+### 优化 4：仓库缓存
+
+避免每次都 `git clone`，使用已有本地仓库：
+
+```bash
+openclaw cron add --name "每小时同步仓库" --every 1h --message "请在 /workspace/repos/ 下的所有仓库执行 git fetch --all && git pull origin main"
+```
+
+## 6. 安全与合规
+
+### API Key 权限最小化
+
+| 凭证 | 最小权限 | 存放位置 |
+|------|---------|---------|
+| Anthropic API Key | 独立创建（便于追踪和撤销） | 环境变量 |
+| GitHub PAT | Fine-grained，仅目标仓库 | 环境变量 |
+| GitHub SSH Key | 限定到具体仓库 | `~/.ssh/` |
+
+**禁止**使用拥有 `admin:org`、`delete_repo` 等危险权限的 Token。
+
+### 启用分支保护
+
+在 GitHub Settings → Branch protection rules 中配置：
+
+- Require a pull request before merging
+- Require approvals（至少 1 个审批）
+- Require status checks to pass（CI 必须通过）
+
+### 敏感文件保护
+
+确保 `.gitignore` 包含：
+```
+.env
+.env.*
+*.key
+*.pem
+credentials.json
+secrets/
+```
+
+在 `CLAUDE.md` 中明确禁止操作敏感文件：
+
+```markdown
+## 安全规则
+- 禁止读取或修改 .env、*.key、*.pem 等敏感文件
+- 禁止在代码中硬编码密钥、Token 或密码
+- 提交前检查 git diff，确保不包含敏感信息
+```
+
+### Copilot 审查是辅助，不替代人工
+
+对于关键模块（认证、支付、数据处理），即使 Copilot 审查通过，也应有人工 Review。
+
+## 7. 更多可能
+
+基于同样的架构，你还可以拓展出：
+
+1. **开源贡献加速器** — 看到感兴趣的项目，直接说"给 README 翻译成中文并提 PR"
+2. **团队 Code Review 助手** — Cron 扫描所有开放 PR，自动生成审查摘要推送到群聊
+3. **技术债清理机器人** — 每周扫描 TODO/FIXME/HACK，按优先级创建 Issue
+4. **依赖更新巡检** — 定时检查 `npm outdated`，自动创建升级 PR 并跑 CI
+5. **文档同步守卫** — 监控代码变更，API 签名变化时自动更新文档并提 PR
+
+## 完成检查
+
+- [ ] CLAUDE.md 已创建
+- [ ] coding 配置档已确认
+- [ ] PR 模板已配置
+- [ ] 分支保护规则已启用
+- [ ] 敏感文件保护已配置
+- [ ] 至少跑通一个高级场景
+
+---
+
+*内容来源：[hello-claw](https://github.com/datawhalechina/hello-claw) | CC BY-NC-SA 4.0*

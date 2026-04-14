@@ -1,0 +1,59 @@
+---
+title: Python 环境配置
+description: 使用 uv 管理 Python 环境和包
+difficulty: beginner
+duration: 10
+category: dev-tools
+tags: [python, uv]
+series: python-fundamentals
+seriesOrder: 1
+source: builtin
+---
+
+# Python 环境配置
+
+> 适用人群：Python 初学者
+> 预计时间：10 分钟
+
+## 为什么用 uv？
+
+uv 是一个极速的 Python 包管理器和环境管理工具，比 pip 快 10-100 倍。
+
+## 安装 uv
+
+<RunButton command="curl -LsSf https://astral.sh/uv/install.sh | sh" />
+
+验证安装：
+
+<RunButton command="uv --version" />
+
+## 创建虚拟环境
+
+<RunButton command="uv venv" />
+
+激活虚拟环境：
+
+```bash
+source .venv/bin/activate    # macOS / Linux
+.venv\Scripts\activate       # Windows
+```
+
+## 安装包
+
+<RunButton command="uv pip install requests" />
+
+## 常用命令
+
+```bash
+uv pip install <package>     # 安装包
+uv pip install -r requirements.txt  # 从文件安装
+uv pip list                  # 列出已安装的包
+uv pip uninstall <package>   # 卸载包
+uv pip freeze > requirements.txt    # 导出依赖
+```
+
+## 完成检查
+
+- [ ] uv 已安装
+- [ ] 能创建虚拟环境
+- [ ] 能安装 Python 包

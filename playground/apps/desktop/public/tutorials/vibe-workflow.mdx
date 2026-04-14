@@ -1,0 +1,142 @@
+---
+title: 自动化编程工作流
+description: Issue 到 PR 自动化，AI 代码审查与重构
+difficulty: intermediate
+duration: 20
+category: ai-agent
+tags: [vibe-coding, claude, 自动化, 代码审查]
+series: vibe-coding
+seriesOrder: 2
+source: builtin
+---
+
+# 自动化编程工作流
+
+> 适用人群：已配置 Claude Code + OpenClaw 的用户
+> 预计时间：20 分钟
+
+本教程带你完成从发送需求到合并 PR 的完整闭环。
+
+## 1. 验收标准
+
+跑通后，你应当能稳定完成以下场景：
+
+### 场景 1：一句话修 Bug
+
+发现线上 bug → 在飞书跟龙虾说"修复 user.ts 第 42 行的空指针问题" → 龙虾调用 Claude Code 自动新建分支、修改代码、跑测试、提交 PR → 你确认合并即可。
+
+### 场景 2：Copilot 审查反馈闭环
+
+Copilot 审查发现代码问题 → 龙虾推送审查意见到飞书 → 你回复"按建议修改" → 龙虾调用 Claude Code 自动修复并更新 PR。
+
+### 场景 3：快速原型验证
+
+突然有个产品想法 → 用飞书描述需求（"给 API 加一个 /health 端点，返回版本号和运行时间"） → Claude Code 创建完整 PR。
+
+### 场景 4：非开发者提代码需求
+
+产品经理在飞书群 @龙虾 说"把首页标题从 X 改成 Y" → Claude Code 自动提 PR → 开发者在 GitHub 上确认合并。
+
+## 2. 发送第一条任务
+
+> **跑通前必查**：
+> - GitHub 账户已注册，目标仓库存在
+> - `ANTHROPIC_API_KEY` 有效且有余额
+> - `GITHUB_TOKEN` 有效且已授权目标仓库
+
+在飞书里发送编码需求：
+
+```
+请在仓库 owner/your-repo 上执行以下操作：
+1) 在 README.md 的合适位置添加项目介绍
+2) 完成修改后提交、推送并创建 PR
+3) 完成后把 PR 链接和修改摘要发给我
+```
+
+完整闭环只需四步：
+
+1. **发送需求** — 用自然语言描述任务
+2. **收到 PR 摘要** — 机器人回传 PR 编号、状态、修改文件
+3. **审查 diff** — 点击 PR 链接查看代码变更
+4. **确认合并** — 说"合并并清理分支"，机器人执行 merge + 删除分支
+
+## 3. Copilot 审查反馈闭环
+
+配置 Cron 任务自动轮询 PR 审查状态：
+
+```bash
+openclaw cron add --name "PR审查状态检查" --every 5m --message "检查所有 openclaw/ 前缀分支的开放 PR 审查状态。如果有新的审查结果：1) 列出每个 PR 的审查状态 2) 如果 changes_requested，提取具体修改建议 3) 将结果推送到飞书。"
+```
+
+收到飞书推送后，三种选择：
+- 回复 **"按建议修改"** — 自动修复并更新 PR
+- 回复 **"忽略建议，直接合并"** — 直接合并
+- 回复 **"我来看看"** — 不操作，稍后手动处理
+
+## 4. 从 Issue 到 PR 全自动
+
+```
+请查看仓库 your-repo 的 Issue #42，
+根据 Issue 描述实现功能，创建 PR 并关联该 Issue。
+PR 描述中注明 "Closes #42"，合并后 Issue 会自动关闭。
+```
+
+## 5. 多文件重构
+
+用自然语言描述复杂需求，Claude Code 会自动分析依赖关系：
+
+```
+请帮我重构 src/api/ 目录：
+1) 把 src/api/handlers.ts 中的 handleUser 和 handleOrder 拆分到各自文件
+2) 更新 src/api/index.ts 的导出
+3) 确保所有引用也同步更新 import 路径
+4) 运行测试确保不破坏现有功能
+5) 创建 PR
+```
+
+> 复杂重构建议先让龙虾列出修改计划，确认后再执行。
+
+## 6. 批量文案修改（非开发者友好）
+
+产品经理可以直接在飞书群 @龙虾：
+
+```
+@龙虾 请修改以下文案：
+- src/pages/home.tsx 中的标题从"欢迎使用"改为"开始体验"
+- src/pages/about.tsx 中的描述从"我们是一家..."改为"我们致力于..."
+- 创建 PR
+```
+
+> **群聊安全提示**：确保群成员都是可信的。恶意用户可能通过 @龙虾 注入危险操作。
+
+## 常见问题
+
+**Claude Code 调用失败？**
+
+<RunButton command="clawhub list | grep claude-code" />
+
+<RunButton command="claude --version" />
+
+<RunButton command="openclaw logs --limit 50 | grep -i 'claude|anthropic|api'" />
+
+**PR 创建失败（Permission denied）？**
+
+<RunButton command="gh auth status" />
+
+常见原因：Fine-grained Token 没选目标仓库、Token 过期、组织仓库需要 SSO 授权。
+
+**代码修改不符合预期？**
+
+在仓库根目录创建 `CLAUDE.md` 文件，写入项目编码规范（详见高级教程）。
+
+## 完成检查
+
+- [ ] 第一条编码任务已发送
+- [ ] PR 已成功创建
+- [ ] 能查看 PR diff
+- [ ] 合并操作已完成
+- [ ] 至少跑通一个高级场景
+
+---
+
+*内容来源：[hello-claw](https://github.com/datawhalechina/hello-claw) | CC BY-NC-SA 4.0*

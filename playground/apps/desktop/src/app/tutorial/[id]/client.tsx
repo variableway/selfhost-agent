@@ -1,68 +1,174 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/store/useAppStore";
-import {
-  Card,
-  CardContent,
-  Button,
-  Badge,
-  Separator,
-  ScrollArea,
-} from "@innate/ui";
+import { Button, Badge } from "@innate/ui";
 import {
   ArrowLeft,
-  Play,
   CheckCircle,
   Clock,
-  Terminal,
-  Copy,
-  Check,
   Sparkles,
   RotateCcw,
 } from "lucide-react";
+import { MDXRemote, MDXRemoteSerializeResult } from "next-mdx-remote";
+import { serialize } from "next-mdx-remote/serialize";
+import remarkGfm from "remark-gfm";
+import { RunButton } from "@/components/tutorial/run-button";
+import { loadTutorialContent, parseFrontmatter, TutorialFile } from "@/lib/tutorial-scanner";
 
 interface TutorialDetailClientProps {
   id: string;
 }
 
-export default function TutorialDetailClient({ id }: TutorialDetailClientProps) {
-  const router = useRouter();
-  const tutorialId = id;
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+// MDX component overrides
+function MdxPre({ children }: { children?: React.ReactNode }) {
+  return (
+    <div className="my-3 rounded-md border bg-muted/50 overflow-hidden">
+      <pre className="p-3 overflow-x-auto text-sm">{children}</pre>
+    </div>
+  );
+}
 
-  const {
-    tutorials,
-    executeCommandInTerminal,
-    updateProgress,
-    progress,
-  } = useAppStore();
+function MdxCode({ className, children }: { className?: string; children?: React.ReactNode }) {
+  const match = /language-(\w+)/.exec(className || "");
+  const lang = match ? match[1] : null;
+  const isBlock = !!lang || (typeof children === "string" && children.includes("\n"));
 
-  const tutorial = tutorials.find((t) => t.id === tutorialId);
-  const tutorialProgress = progress[tutorialId];
-
-  if (!tutorial) {
+  if (isBlock) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-muted-foreground">教程不存在</div>
+      <div className="my-3 rounded-md border bg-muted/50 overflow-hidden">
+        {lang && (
+          <div className="border-b bg-muted px-3 py-1 text-xs text-muted-foreground font-mono">
+            {lang}
+          </div>
+        )}
+        <pre className="p-3 overflow-x-auto text-sm">
+          <code>{children}</code>
+        </pre>
       </div>
     );
   }
 
-  const handleRun = (code: string, id: string) => {
-    executeCommandInTerminal(code);
-  };
+  return (
+    <code className="rounded bg-muted px-1.5 py-0.5 text-sm font-mono">
+      {children}
+    </code>
+  );
+}
 
-  const handleCopy = (code: string, id: string) => {
-    navigator.clipboard.writeText(code);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
-  };
+const mdxComponents = {
+  RunButton,
+  pre: MdxPre,
+  code: MdxCode,
+  h1: ({ children }: { children?: React.ReactNode }) => (
+    <h1 className="text-2xl font-bold mt-0 mb-4">{children}</h1>
+  ),
+  h2: ({ children }: { children?: React.ReactNode }) => (
+    <h2 className="text-xl font-semibold mt-8 mb-3 border-b pb-2">{children}</h2>
+  ),
+  h3: ({ children }: { children?: React.ReactNode }) => (
+    <h3 className="text-lg font-medium mt-6 mb-2">{children}</h3>
+  ),
+  table: ({ children }: { children?: React.ReactNode }) => (
+    <div className="my-4 overflow-x-auto rounded-md border">
+      <table className="w-full text-sm">{children}</table>
+    </div>
+  ),
+  th: ({ children }: { children?: React.ReactNode }) => (
+    <th className="border-b bg-muted px-3 py-2 text-left font-medium">{children}</th>
+  ),
+  td: ({ children }: { children?: React.ReactNode }) => (
+    <td className="border-b px-3 py-2">{children}</td>
+  ),
+  blockquote: ({ children }: { children?: React.ReactNode }) => (
+    <blockquote className="my-4 border-l-4 border-blue-500 bg-blue-50 dark:bg-blue-950/30 px-4 py-2 rounded-r-md">
+      {children}
+    </blockquote>
+  ),
+  ul: ({ children }: { children?: React.ReactNode }) => (
+    <ul className="my-2 ml-6 list-disc space-y-1">{children}</ul>
+  ),
+  ol: ({ children }: { children?: React.ReactNode }) => (
+    <ol className="my-2 ml-6 list-decimal space-y-1">{children}</ol>
+  ),
+  p: ({ children }: { children?: React.ReactNode }) => (
+    <p className="my-3 leading-7">{children}</p>
+  ),
+  hr: () => <hr className="my-6 border-border" />,
+  a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
+    <a href={href} className="text-blue-600 dark:text-blue-400 underline" target="_blank" rel="noopener noreferrer">
+      {children}
+    </a>
+  ),
+};
+
+export default function TutorialDetailClient({ id }: TutorialDetailClientProps) {
+  const router = useRouter();
+  const slug = id;
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [mdxSource, setMdxSource] = useState<MDXRemoteSerializeResult | null>(null);
+  const [meta, setMeta] = useState<TutorialFile | null>(null);
+
+  const { discoveredTutorials, tutorials, updateProgress, progress } = useAppStore();
+  const tutorialProgress = progress[slug];
+
+  // Load MDX content
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        // Find workspace path
+        const state = useAppStore.getState();
+        const workspacePath = state.currentWorkspace?.path ||
+          (state.defaultWorkspaceId ? state.workspaces.find((w) => w.id === state.defaultWorkspaceId)?.path : undefined);
+
+        const result = await loadTutorialContent(slug, workspacePath);
+        if (!result) {
+          setError("教程内容未找到");
+          return;
+        }
+
+        const { frontmatter, body } = parseFrontmatter(result.content);
+
+        // Set metadata
+        const tutorialMeta = discoveredTutorials.find((t) => t.slug === slug);
+        setMeta(tutorialMeta || {
+          slug,
+          title: frontmatter.title || slug,
+          description: frontmatter.description || '',
+          difficulty: frontmatter.difficulty || 'beginner',
+          duration: frontmatter.duration || 10,
+          category: frontmatter.category || 'general',
+          tags: frontmatter.tags || [],
+          source: result.source,
+        } as TutorialFile);
+
+        // Serialize MDX body
+        const serialized = await serialize(body, {
+          mdxOptions: {
+            remarkPlugins: [remarkGfm],
+            format: "mdx",
+          },
+          parseFrontmatter: false,
+        });
+        setMdxSource(serialized);
+      } catch (err) {
+        setError(String(err));
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [slug, discoveredTutorials]);
 
   const handleMarkComplete = () => {
     updateProgress({
-      tutorialId,
+      tutorialId: slug,
       completed: true,
       completedSections: [],
       completedAt: new Date().toISOString(),
@@ -71,7 +177,7 @@ export default function TutorialDetailClient({ id }: TutorialDetailClientProps) 
 
   const handleReset = () => {
     updateProgress({
-      tutorialId,
+      tutorialId: slug,
       completed: false,
       completedSections: [],
     });
@@ -79,53 +185,39 @@ export default function TutorialDetailClient({ id }: TutorialDetailClientProps) 
 
   const getDifficultyConfig = (difficulty: string) => {
     switch (difficulty) {
-      case "beginner":
-        return { text: "入门", color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/20" };
-      case "intermediate":
-        return { text: "进阶", color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/20" };
-      case "advanced":
-        return { text: "高级", color: "text-rose-500", bg: "bg-rose-500/10", border: "border-rose-500/20" };
-      default:
-        return { text: "入门", color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/20" };
+      case "beginner": return { text: "入门", color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/20" };
+      case "intermediate": return { text: "进阶", color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/20" };
+      case "advanced": return { text: "高级", color: "text-rose-500", bg: "bg-rose-500/10", border: "border-rose-500/20" };
+      default: return { text: "入门", color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/20" };
     }
   };
 
-  const difficulty = getDifficultyConfig(tutorial.difficulty);
+  const difficulty = getDifficultyConfig(meta?.difficulty || "beginner");
 
-  const sections = [
-    {
-      type: "text" as const,
-      content: `## 什么是 ${tutorial.title}？\n\n这是一个关于 ${tutorial.title} 的教程。在这里，你将学习如何使用相关工具，并通过实际操作来掌握核心概念。本教程适合${difficulty.text}水平的用户。`,
-    },
-    {
-      type: "text" as const,
-      content: "## 前置条件\n\n在开始之前，请确保你已经：\n- 安装了终端工具\n- 具备基本的命令行知识\n- 有稳定的网络连接",
-    },
-    {
-      type: "executable" as const,
-      id: "step-1",
-      title: "安装",
-      description: "执行以下命令进行安装：",
-      code: "brew install node",
-      language: "bash",
-    },
-    {
-      type: "text" as const,
-      content: "安装完成后，你可以通过运行 `node -v` 来验证安装是否成功。如果看到版本号输出，说明安装成功。",
-    },
-    {
-      type: "executable" as const,
-      id: "step-2",
-      title: "验证安装",
-      description: "验证 Node.js 和 npm 是否正确安装：",
-      code: "node -v && npm -v",
-      language: "bash",
-    },
-    {
-      type: "text" as const,
-      content: "## 总结\n\n恭喜！你已经完成了本教程的学习。现在你可以开始使用这个工具了。建议继续学习系列中的其他教程，以获得更全面的知识。",
-    },
-  ];
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="flex items-center gap-3">
+          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <span className="text-muted-foreground">加载教程...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-8">
+        <p className="text-red-500 mb-4">{error}</p>
+        <Button variant="outline" onClick={() => router.back()}>
+          <ArrowLeft className="mr-2" size={16} />
+          返回
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full overflow-auto">
@@ -144,8 +236,11 @@ export default function TutorialDetailClient({ id }: TutorialDetailClientProps) 
               </Badge>
               <span className="flex items-center gap-1 text-sm text-muted-foreground">
                 <Clock size={14} />
-                {tutorial.duration} 分钟
+                {meta?.duration || 10} 分钟
               </span>
+              {meta?.source === 'local' && (
+                <Badge variant="outline" className="text-xs">本地</Badge>
+              )}
               {tutorialProgress?.completed && (
                 <Badge variant="outline" className="text-emerald-500 border-emerald-500/20">
                   <CheckCircle className="w-3 h-3 mr-1" />
@@ -154,8 +249,8 @@ export default function TutorialDetailClient({ id }: TutorialDetailClientProps) 
               )}
             </div>
 
-            <h1 className="text-3xl font-bold mb-2">{tutorial.title}</h1>
-            <p className="text-muted-foreground text-lg">{tutorial.description}</p>
+            <h1 className="text-3xl font-bold mb-2">{meta?.title || slug}</h1>
+            <p className="text-muted-foreground text-lg">{meta?.description}</p>
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
@@ -171,10 +266,7 @@ export default function TutorialDetailClient({ id }: TutorialDetailClientProps) 
                 </div>
               </>
             ) : (
-              <Button
-                onClick={handleMarkComplete}
-                className="bg-gradient-to-r from-primary to-secondary"
-              >
+              <Button onClick={handleMarkComplete} className="bg-gradient-to-r from-primary to-secondary">
                 <CheckCircle className="mr-2" size={18} />
                 标记完成
               </Button>
@@ -184,81 +276,32 @@ export default function TutorialDetailClient({ id }: TutorialDetailClientProps) 
       </div>
 
       {/* Content */}
-      <div className="px-8 py-8 max-w-4xl">
-        <div className="space-y-8">
-          {sections.map((section, index) => (
-            <div key={index}>
-              {section.type === "text" ? (
-                <div className="prose prose-invert prose-lg max-w-none">
-                  <div
-                    className="text-muted-foreground leading-relaxed"
-                    dangerouslySetInnerHTML={{
-                      __html: section.content
-                        .replace(/## (.*)/, '<h2 class="text-2xl font-bold text-foreground mb-4 mt-8">$1</h2>')
-                        .replace(/- (.*)/g, '<li class="ml-4 mb-2">$1</li>')
-                        .replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 bg-muted rounded text-primary text-sm">$1</code>'),
-                    }}
-                  />
-                </div>
-              ) : section.type === "executable" ? (
-                <Card>
-                  <div className="flex items-center justify-between px-5 py-4 bg-muted/50 border-b">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                        <Terminal className="text-primary" size={20} />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold">{(section as any).title}</h3>
-                        <p className="text-sm text-muted-foreground">{(section as any).description}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleCopy((section as any).code, (section as any).id)}
-                      >
-                        {copiedId === (section as any).id ? (
-                          <Check className="text-emerald-500" size={18} />
-                        ) : (
-                          <Copy size={18} />
-                        )}
-                      </Button>
-                      <Button
-                        onClick={() => handleRun((section as any).code, (section as any).id)}
-                        className="bg-gradient-to-r from-primary to-secondary"
-                      >
-                        <Play className="mr-2 fill-current" size={16} />
-                        运行
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="p-5 bg-black/50">
-                    <pre className="font-mono text-sm text-foreground overflow-x-auto">
-                      <code>{(section as any).code}</code>
-                    </pre>
-                  </div>
-                </Card>
-              ) : null}
+      <div className="flex-1 overflow-auto">
+        <div className="mx-auto max-w-3xl px-6 py-8">
+          {mdxSource ? (
+            <div className="prose prose-neutral dark:prose-invert max-w-none">
+              <MDXRemote {...mdxSource} components={mdxComponents} />
             </div>
-          ))}
+          ) : null}
         </div>
 
         {/* Footer CTA */}
-        <div className="mt-12 p-6 bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20 rounded-2xl">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-              <Sparkles className="text-primary-foreground" size={28} />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-bold mb-1">
-                {tutorialProgress?.completed ? "想要学习更多？" : "完成本教程！"}
-              </h3>
-              <p className="text-muted-foreground">
-                {tutorialProgress?.completed
-                  ? "继续探索系列中的其他教程，提升你的技能。"
-                  : "完成上面的步骤，然后点击\"标记完成\"按钮。"}
-              </p>
+        <div className="mx-auto max-w-3xl px-6 pb-8">
+          <div className="p-6 bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20 rounded-2xl">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                <Sparkles className="text-primary-foreground" size={28} />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold mb-1">
+                  {tutorialProgress?.completed ? "想要学习更多？" : "完成本教程！"}
+                </h3>
+                <p className="text-muted-foreground">
+                  {tutorialProgress?.completed
+                    ? "继续探索系列中的其他教程，提升你的技能。"
+                    : "完成上面的步骤，然后点击\"标记完成\"按钮。"}
+                </p>
+              </div>
             </div>
           </div>
         </div>

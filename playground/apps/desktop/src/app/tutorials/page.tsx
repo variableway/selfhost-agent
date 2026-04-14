@@ -1,0 +1,210 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAppStore } from "@/store/useAppStore";
+import { Button, Badge, Input, Separator } from "@innate/ui";
+import {
+  BookOpen,
+  Search,
+  Clock,
+  Play,
+  CheckCircle,
+  Circle,
+  FileText,
+  Sparkles,
+  FolderOpen,
+} from "lucide-react";
+
+export default function TutorialsPage() {
+  const router = useRouter();
+  const { discoveredTutorials, discoveredSeries, progress, scanTutorials } = useAppStore();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedSeries, setSelectedSeries] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    scanTutorials();
+  }, [scanTutorials]);
+
+  if (!mounted) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <span className="text-muted-foreground">加载中...</span>
+        </div>
+      </div>
+    );
+  }
+
+  const filtered = discoveredTutorials.filter((t) => {
+    const matchesSearch = !searchQuery ||
+      t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSeries = !selectedSeries || t.series === selectedSeries;
+    return matchesSearch && matchesSeries;
+  });
+
+  const getDifficultyConfig = (d: string) => {
+    switch (d) {
+      case "beginner": return { text: "入门", color: "text-emerald-500", bg: "bg-emerald-500/10" };
+      case "intermediate": return { text: "进阶", color: "text-amber-500", bg: "bg-amber-500/10" };
+      case "advanced": return { text: "高级", color: "text-rose-500", bg: "bg-rose-500/10" };
+      default: return { text: "入门", color: "text-emerald-500", bg: "bg-emerald-500/10" };
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-full overflow-auto">
+      {/* Header */}
+      <div className="px-8 py-6 border-b shrink-0">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <BookOpen className="text-primary" size={20} />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold">教程中心</h1>
+              <p className="text-sm text-muted-foreground">
+                {discoveredTutorials.length} 个教程 · {discoveredSeries.length} 个系列
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Search + Filter */}
+        <div className="flex items-center gap-4">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+            <Input
+              type="text"
+              placeholder="搜索教程..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant={selectedSeries === null ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedSeries(null)}
+            >
+              全部
+            </Button>
+            {discoveredSeries.map((s) => {
+              const count = discoveredTutorials.filter((t) => t.series === s.id).length;
+              if (count === 0) return null;
+              return (
+                <Button
+                  key={s.id}
+                  variant={selectedSeries === s.id ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedSeries(selectedSeries === s.id ? null : s.id)}
+                  className="gap-1"
+                >
+                  {s.icon} {s.title}
+                  <Badge variant="secondary" className="text-xs ml-1">{count}</Badge>
+                </Button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 px-8 py-6">
+        {filtered.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {filtered.map((tutorial) => {
+              const isCompleted = progress[tutorial.slug]?.completed;
+              const diff = getDifficultyConfig(tutorial.difficulty);
+              const seriesInfo = tutorial.series
+                ? discoveredSeries.find((s) => s.id === tutorial.series)
+                : null;
+
+              return (
+                <div
+                  key={tutorial.slug}
+                  className="group cursor-pointer border rounded-lg p-4 transition-all hover:shadow-lg hover:border-primary/50"
+                  onClick={() => router.push(`/tutorial/${tutorial.slug}`)}
+                >
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <Badge className={`text-xs ${diff.bg} ${diff.color}`}>
+                          {diff.text}
+                        </Badge>
+                        {isCompleted && (
+                          <Badge variant="outline" className="text-xs text-emerald-500 border-emerald-500/20">
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            已完成
+                          </Badge>
+                        )}
+                      </div>
+                      <h3 className="font-medium truncate group-hover:text-primary transition-colors">
+                        {tutorial.title}
+                      </h3>
+                    </div>
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                      isCompleted
+                        ? "bg-emerald-500/10 text-emerald-500"
+                        : "bg-muted text-muted-foreground"
+                    }`}>
+                      {isCompleted ? <CheckCircle size={14} /> : <Circle size={14} />}
+                    </div>
+                  </div>
+
+                  <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                    {tutorial.description}
+                  </p>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Clock size={12} />
+                        {tutorial.duration} 分钟
+                      </span>
+                      {seriesInfo && (
+                        <span>{seriesInfo.icon} {seriesInfo.title}</span>
+                      )}
+                    </div>
+                    <Button
+                      size="sm"
+                      variant={isCompleted ? "outline" : "default"}
+                      className={`text-xs h-7 ${
+                        isCompleted
+                          ? "text-emerald-500 border-emerald-500/20"
+                          : "bg-gradient-to-r from-primary to-secondary opacity-0 group-hover:opacity-100 transition-opacity"
+                      }`}
+                    >
+                      <Play className="w-3 h-3 mr-1 fill-current" />
+                      {isCompleted ? "复习" : "开始"}
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-16 bg-card rounded-2xl border border-dashed">
+            <FileText size={48} className="mx-auto mb-4 text-muted-foreground opacity-50" />
+            <p className="text-muted-foreground">
+              {searchQuery || selectedSeries ? "没有找到匹配的教程" : "暂无教程"}
+            </p>
+            {(searchQuery || selectedSeries) && (
+              <Button
+                variant="link"
+                onClick={() => { setSearchQuery(""); setSelectedSeries(null); }}
+              >
+                清除筛选条件
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

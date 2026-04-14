@@ -1,8 +1,22 @@
 import { tutorials } from "@/data/tutorials";
 import TutorialDetailClient from "./client";
 
+// Builtin slugs for static generation
+const builtinSlugs = [
+  ...tutorials.map((t) => t.id),
+  // Also include MDX-specific slugs
+  "terminal-setup-mdx",
+  "openclaw-install",
+  "openclaw-manual-install",
+  "openclaw-config",
+  "openclaw-chat",
+  "vibe-setup",
+  "vibe-workflow",
+  "vibe-advanced",
+];
+
 export function generateStaticParams() {
-  return tutorials.map((t) => ({ id: t.id }));
+  return [...new Set(builtinSlugs)].map((id) => ({ id }));
 }
 
 export default async function TutorialDetailPage({ params }: { params: Promise<{ id: string }> }) {

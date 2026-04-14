@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useAppStore } from "@/store/useAppStore";
 import { FileNode } from "@/types";
 import { Button } from "@innate/ui";
@@ -16,9 +16,14 @@ import {
   ChevronDown,
   ArrowLeft,
   Sparkles,
+  Star,
+  Trash2,
+  MoreVertical,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeHighlight from "rehype-highlight";
+import "highlight.js/styles/github-dark.css";
 
 const DEFAULT_FOLDERS = [
   { name: "skills", description: "技能相关文件" },
@@ -95,11 +100,98 @@ function FileTreeItem({
   );
 }
 
+// Extract headings from markdown content for ToC
+function extractHeadings(content: string): { id: string; text: string; level: number }[] {
+  const headings: { id: string; text: string; level: number }[] = [];
+  const lines = content.split("\n");
+  for (const line of lines) {
+    const match = line.match(/^(#{1,6})\s+(.+)$/);
+    if (match) {
+      const level = match[1].length;
+      const text = match[2].replace(/[*_`#]/g, "").trim();
+      const id = text.toLowerCase().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-");
+      headings.push({ id, text, level });
+    }
+  }
+  return headings;
+}
+
+// Table of Contents sidebar
+function TableOfContents({ headings }: { headings: { id: string; text: string; level: number }[] }) {
+  const [activeId, setActiveId] = useState<string>("");
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActiveId(entry.target.id);
+          }
+        }
+      },
+      { rootMargin: "-80px 0px -70% 0px" }
+    );
+
+    for (const h of headings) {
+      const el = document.getElementById(h.id);
+      if (el) observer.observe(el);
+    }
+    return () => observer.disconnect();
+  }, [headings]);
+
+  if (headings.length === 0) return null;
+
+  const minLevel = Math.min(...headings.map((h) => h.level));
+
+  return (
+    <div className="w-52 shrink-0 border-l bg-muted/20 overflow-y-auto">
+      <div className="px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider border-b sticky top-0 bg-muted/20">
+        目录
+      </div>
+      <nav className="p-2">
+        {headings.map((h) => (
+          <a
+            key={h.id}
+            href={`#${h.id}`}
+            onClick={(e) => {
+              e.preventDefault();
+              document.getElementById(h.id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }}
+            className={`block text-xs py-1 px-2 rounded transition-colors truncate ${
+              h.level > minLevel ? "ml-3" : ""
+            } ${
+              activeId === h.id
+                ? "text-primary font-medium bg-primary/10"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+            }`}
+            title={h.text}
+          >
+            {h.text}
+          </a>
+        ))}
+      </nav>
+    </div>
+  );
+}
+
 // File content viewer
 function FileViewer({ node, content }: { node: FileNode; content: string }) {
   if (!node) return null;
 
   const isMarkdown = node.name.endsWith(".md") || node.name.endsWith(".mdx");
+  const headings = isMarkdown ? extractHeadings(content) : [];
+
+  // Add ids to markdown headings after render
+  const contentRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (contentRef.current && isMarkdown) {
+      contentRef.current.querySelectorAll("h1, h2, h3, h4, h5, h6").forEach((el) => {
+        const text = el.textContent || "";
+        const id = text.toLowerCase().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-");
+        el.id = id;
+      });
+    }
+  }, [content, isMarkdown]);
 
   return (
     <div className="h-full flex flex-col">
@@ -110,15 +202,42 @@ function FileViewer({ node, content }: { node: FileNode; content: string }) {
           {(content.length / 1024).toFixed(1)} KB
         </span>
       </div>
-      <div className="flex-1 overflow-auto p-4">
-        {isMarkdown ? (
-          <div className="prose prose-sm dark:prose-invert max-w-none">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
-          </div>
-        ) : (
-          <pre className="text-sm font-mono whitespace-pre-wrap break-words text-foreground">
-            {content}
-          </pre>
+      <div className="flex-1 flex overflow-hidden">
+        <div ref={contentRef} className="flex-1 overflow-auto p-6">
+          {isMarkdown ? (
+            <div className="prose prose-sm dark:prose-invert max-w-none
+              prose-headings:scroll-mt-4
+              prose-headings:font-semibold prose-headings:text-foreground
+              prose-h1:text-2xl prose-h1:border-b prose-h1:pb-2 prose-h1:mb-4
+              prose-h2:text-xl prose-h2:border-b prose-h2:pb-1 prose-h2:mt-8
+              prose-h3:text-lg prose-h3:mt-6
+              prose-p:leading-7 prose-p:text-muted-foreground
+              prose-strong:text-foreground prose-strong:font-semibold
+              prose-a:text-primary prose-a:font-medium hover:prose-a:underline
+              prose-code:text-primary prose-code:bg-primary/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-mono
+              prose-pre:bg-[#0d1117] prose-pre:border prose-pre:border-border prose-pre:rounded-lg prose-pre:shadow-sm
+              prose-blockquote:border-l-primary prose-blockquote:bg-primary/5 prose-blockquote:rounded-r-lg
+              prose-li:text-muted-foreground
+              prose-table:border prose-th:border prose-th:px-3 prose-th:py-2 prose-th:bg-muted/50
+              prose-td:border prose-td:px-3 prose-td:py-2
+              prose-img:rounded-lg prose-img:shadow-md
+              prose-hr:border-border
+              prose-ul:list-disc prose-ol:list-decimal">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeHighlight]}
+              >
+                {content}
+              </ReactMarkdown>
+            </div>
+          ) : (
+            <pre className="text-sm font-mono whitespace-pre-wrap break-words text-foreground">
+              {content}
+            </pre>
+          )}
+        </div>
+        {isMarkdown && headings.length > 0 && (
+          <TableOfContents headings={headings} />
         )}
       </div>
     </div>
@@ -298,27 +417,25 @@ function WorkspaceBrowser() {
     : [];
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full w-full flex flex-col">
       {/* Workspace header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30 shrink-0">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setCurrentWorkspace(null)}
-            className="h-8 w-8"
-          >
-            <ArrowLeft size={16} />
-          </Button>
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-            <FolderKanban size={16} className="text-primary-foreground" />
-          </div>
-          <div>
-            <h2 className="font-semibold">{currentWorkspace?.name}</h2>
-            <p className="text-xs text-muted-foreground truncate max-w-xs">
-              {currentWorkspace?.path}
-            </p>
-          </div>
+      <div className="flex items-center gap-3 px-4 py-3 border-b bg-muted/30 shrink-0">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setCurrentWorkspace(null)}
+          className="h-8 w-8 shrink-0"
+        >
+          <ArrowLeft size={16} />
+        </Button>
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shrink-0">
+          <FolderKanban size={16} className="text-primary-foreground" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h2 className="font-semibold">{currentWorkspace?.name}</h2>
+          <p className="text-xs text-muted-foreground truncate">
+            {currentWorkspace?.path}
+          </p>
         </div>
       </div>
 
@@ -392,22 +509,96 @@ function WorkspaceBrowser() {
   );
 }
 
+// Context menu for workspace cards
+function WorkspaceContextMenu({
+  ws,
+  isDefault,
+  position,
+  onClose,
+}: {
+  ws: { id: string; name: string };
+  isDefault: boolean;
+  position: { x: number; y: number };
+  onClose: () => void;
+}) {
+  const { deleteWorkspace, setDefaultWorkspace } = useAppStore();
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      ref={ref}
+      className="fixed z-50 bg-popover border border-border rounded-lg shadow-lg py-1 min-w-[160px] animate-in fade-in-0 zoom-in-95"
+      style={{ left: position.x, top: position.y }}
+    >
+      <button
+        onClick={() => {
+          setDefaultWorkspace(isDefault ? null : ws.id);
+          onClose();
+        }}
+        className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors"
+      >
+        <Star size={14} className={isDefault ? "text-amber-500 fill-amber-500" : "text-muted-foreground"} />
+        {isDefault ? "取消默认" : "设为默认"}
+      </button>
+      <div className="border-t border-border my-1" />
+      <button
+        onClick={() => {
+          deleteWorkspace(ws.id);
+          onClose();
+        }}
+        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-red-500/10 transition-colors"
+      >
+        <Trash2 size={14} />
+        删除工作区
+      </button>
+    </div>
+  );
+}
+
 // Main workspace page component
 export function WorkspacePage() {
   const {
     workspaces,
     currentWorkspace,
+    defaultWorkspaceId,
     createWorkspace,
     setCurrentWorkspace,
     setFileTree,
   } = useAppStore();
 
   const [showCreate, setShowCreate] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{
+    ws: { id: string; name: string };
+    position: { x: number; y: number };
+  } | null>(null);
+
+  const handleContextMenu = useCallback((e: React.MouseEvent, ws: { id: string; name: string }) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({ ws, position: { x: e.clientX, y: e.clientY } });
+  }, []);
 
   // If we have a current workspace, show the browser
   if (currentWorkspace) {
     return (
-      <div className="h-full flex">
+      <div className="h-full w-full flex">
         <WorkspaceBrowser />
       </div>
     );
@@ -416,10 +607,12 @@ export function WorkspacePage() {
   // If creating a new workspace
   if (showCreate) {
     return (
-      <div className="h-full flex">
+      <div className="h-full overflow-auto">
         <CreateWorkspaceForm
           onCancel={() => setShowCreate(false)}
           onSubmit={async (name, path) => {
+            // Create default subdirectories on disk
+            await createWorkspaceFolders(path);
             createWorkspace(name, path);
             // Find the newly created workspace
             const ws = useAppStore.getState().workspaces.find((w) => w.path === path);
@@ -447,32 +640,69 @@ export function WorkspacePage() {
           </Button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {workspaces.map((ws) => (
-            <button
-              key={ws.id}
-              onClick={async () => {
-                setCurrentWorkspace(ws);
-                await buildFileTree(ws.path);
-              }}
-              className="p-4 rounded-xl border border-border hover:border-primary/30 hover:shadow-md transition-all text-left group"
-            >
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                  <FolderKanban size={20} className="text-primary" />
+          {workspaces.map((ws) => {
+            const isDefault = defaultWorkspaceId === ws.id;
+            return (
+              <button
+                key={ws.id}
+                onClick={async () => {
+                  setCurrentWorkspace(ws);
+                  await buildFileTree(ws.path);
+                }}
+                onContextMenu={(e) => handleContextMenu(e, ws)}
+                className={`p-4 rounded-xl border transition-all text-left group relative ${
+                  isDefault
+                    ? "border-primary/50 bg-primary/5 hover:border-primary/70"
+                    : "border-border hover:border-primary/30 hover:shadow-md"
+                }`}
+              >
+                {/* More button */}
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const rect = (e.target as HTMLElement).getBoundingClientRect();
+                    setContextMenu({ ws, position: { x: rect.left, y: rect.bottom + 4 } });
+                  }}
+                  className="absolute top-3 right-3 p-1 rounded-md opacity-0 group-hover:opacity-100 hover:bg-muted transition-all cursor-pointer"
+                >
+                  <MoreVertical size={14} className="text-muted-foreground" />
                 </div>
-                <div>
-                  <h3 className="font-semibold">{ws.name}</h3>
-                  <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-                    {ws.path}
-                  </p>
+
+                <div className="flex items-center gap-3 mb-2">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors ${
+                    isDefault ? "bg-primary/20" : "bg-primary/10"
+                  }`}>
+                    <FolderKanban size={20} className="text-primary" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <h3 className="font-semibold">{ws.name}</h3>
+                      {isDefault && (
+                        <Star size={12} className="text-amber-500 fill-amber-500" />
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                      {ws.path}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                创建于 {new Date(ws.createdAt).toLocaleDateString("zh-CN")}
-              </p>
-            </button>
-          ))}
+                <p className="text-xs text-muted-foreground">
+                  创建于 {new Date(ws.createdAt).toLocaleDateString("zh-CN")}
+                </p>
+              </button>
+            );
+          })}
         </div>
+
+        {/* Context menu */}
+        {contextMenu && (
+          <WorkspaceContextMenu
+            ws={contextMenu.ws}
+            isDefault={defaultWorkspaceId === contextMenu.ws.id}
+            position={contextMenu.position}
+            onClose={() => setContextMenu(null)}
+          />
+        )}
       </div>
     );
   }
@@ -483,6 +713,23 @@ export function WorkspacePage() {
       <EmptyWorkspaceState onCreate={() => setShowCreate(true)} />
     </div>
   );
+}
+
+// Helper: create workspace subdirectories on disk
+async function createWorkspaceFolders(rootPath: string) {
+  if ("__TAURI_INTERNALS__" in window) {
+    try {
+      const { mkdir, exists } = await import("@tauri-apps/plugin-fs");
+      for (const folder of DEFAULT_FOLDERS) {
+        const folderPath = `${rootPath}/${folder.name}`;
+        if (!(await exists(folderPath))) {
+          await mkdir(folderPath);
+        }
+      }
+    } catch {
+      // Directory creation failed — workspace may still be usable
+    }
+  }
 }
 
 // Helper: build file tree from workspace path

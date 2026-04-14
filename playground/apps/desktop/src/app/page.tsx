@@ -11,7 +11,6 @@ import {
   Button,
   Badge,
   Separator,
-  Input,
 } from "@innate/ui";
 import {
   FolderOpen,
@@ -23,7 +22,6 @@ import {
   ArrowRight,
   Zap,
   BookOpen,
-  Search,
   CheckCircle,
   Circle,
   Play,
@@ -32,7 +30,7 @@ import {
 export default function Home() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
-  const { series, getFilteredTutorials, progress, searchQuery, setSearchQuery } = useAppStore();
+  const { discoveredSeries, discoveredTutorials, progress } = useAppStore();
 
   useEffect(() => {
     setMounted(true);
@@ -49,12 +47,11 @@ export default function Home() {
     );
   }
 
-  const filteredTutorials = getFilteredTutorials();
-  const recentTutorials = filteredTutorials.slice(0, 6);
+  const recentTutorials = discoveredTutorials.slice(0, 6);
 
   const stats = [
-    { label: "教程总数", value: filteredTutorials.length, icon: FileText },
-    { label: "系列课程", value: series.length, icon: FolderOpen },
+    { label: "教程总数", value: discoveredTutorials.length, icon: FileText },
+    { label: "系列课程", value: discoveredSeries.length, icon: FolderOpen },
     { label: "学习时长", value: "120+", icon: Clock },
   ];
 
@@ -89,7 +86,7 @@ export default function Home() {
       {/* Hero Section */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-secondary/10" />
-        <div className="relative px-8 py-12">
+        <div className="relative px-8 pt-20 pb-10">
           <div className="max-w-4xl">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/20 rounded-full mb-6">
               <Sparkles className="text-primary" size={16} />
@@ -129,19 +126,7 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="px-8 pb-8 space-y-10">
-        {/* Search */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-          <Input
-            type="text"
-            placeholder="搜索教程..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-
+      <div className="px-8 pb-8 pt-2 space-y-10">
         {/* Featured Series */}
         <section>
           <div className="flex items-center justify-between mb-6">
@@ -161,11 +146,11 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {series.map((s) => {
-              const tutorials = filteredTutorials.filter((t) => t.series === s.id);
-              const totalDuration = tutorials.reduce((sum, t) => sum + t.duration, 0);
-              const completedCount = tutorials.filter((t) => progress[t.id]?.completed).length;
-              const progressPercent = tutorials.length > 0 ? (completedCount / tutorials.length) * 100 : 0;
+            {discoveredSeries.map((s) => {
+              const seriesTutorials = discoveredTutorials.filter((t) => t.series === s.id);
+              const totalDuration = seriesTutorials.reduce((sum, t) => sum + t.duration, 0);
+              const completedCount = seriesTutorials.filter((t) => progress[t.slug]?.completed).length;
+              const progressPercent = seriesTutorials.length > 0 ? (completedCount / seriesTutorials.length) * 100 : 0;
 
               return (
                 <Card
@@ -184,8 +169,8 @@ export default function Home() {
                         {s.icon || "📚"}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <Badge variant="secondary" className={`text-xs ${getDifficultyColor(s.difficulty)}`}>
-                          {getDifficultyText(s.difficulty)}
+                        <Badge variant="secondary" className="text-xs">
+                          {seriesTutorials.length} 教程
                         </Badge>
                         <CardTitle className="text-base mt-1 truncate">{s.title}</CardTitle>
                       </div>
@@ -196,7 +181,7 @@ export default function Home() {
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
                         <BookOpen size={14} />
-                        <span>{tutorials.length} 个教程</span>
+                        <span>{seriesTutorials.length} 个教程</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <Clock size={14} />
@@ -229,12 +214,10 @@ export default function Home() {
               </div>
               <div>
                 <h2 className="text-xl font-bold">
-                  {filteredTutorials.length > 0 ? "搜索结果" : "最近教程"}
+                  最近教程
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  {filteredTutorials.length > 0
-                    ? `找到 ${filteredTutorials.length} 个教程`
-                    : "最新发布的内容"}
+                  最新发布的内容
                 </p>
               </div>
             </div>
@@ -243,12 +226,12 @@ export default function Home() {
           {recentTutorials.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {recentTutorials.map((tutorial) => {
-                const isCompleted = progress[tutorial.id]?.completed;
+                const isCompleted = progress[tutorial.slug]?.completed;
                 return (
                   <Card
-                    key={tutorial.id}
+                    key={tutorial.slug}
                     className="group cursor-pointer transition-all hover:shadow-lg hover:border-primary/50"
-                    onClick={() => router.push(`/tutorial/${tutorial.id}`)}
+                    onClick={() => router.push(`/tutorial/${tutorial.slug}`)}
                   >
                     <CardHeader className="pb-2">
                       <div className="flex items-start justify-between gap-3">
@@ -310,9 +293,9 @@ export default function Home() {
           ) : (
             <div className="text-center py-16 bg-card rounded-2xl border border-dashed">
               <FileText size={48} className="mx-auto mb-4 text-muted-foreground opacity-50" />
-              <p className="text-muted-foreground">没有找到匹配的教程</p>
-              <Button variant="link" onClick={() => setSearchQuery("")}>
-                清除搜索条件
+              <p className="text-muted-foreground">暂无教程</p>
+              <Button variant="link" onClick={() => router.push("/tutorials")}>
+                浏览教程中心
               </Button>
             </div>
           )}
@@ -333,7 +316,7 @@ export default function Home() {
             </div>
 
             <div className="flex flex-wrap gap-4">
-              <Button variant="outline" className="h-auto py-4 px-6 justify-start">
+              <Button variant="outline" className="h-auto py-4 px-6 justify-start" onClick={() => router.push("/admin/workspace")}>
                 <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mr-3">
                   <FolderOpen className="text-primary" size={24} />
                 </div>
@@ -343,7 +326,7 @@ export default function Home() {
                 </div>
               </Button>
 
-              <Button variant="outline" className="h-auto py-4 px-6 justify-start">
+              <Button variant="outline" className="h-auto py-4 px-6 justify-start" onClick={() => router.push("/admin/lesson")}>
                 <div className="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center mr-3">
                   <Plus className="text-secondary" size={24} />
                 </div>

@@ -1,7 +1,10 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { Tutorial, Series, Progress, TerminalPosition, TerminalEntry, Workspace, FileNode } from '../types';
 import { tutorials as initialTutorials } from '../data/tutorials';
 import { series as initialSeries } from '../data/series';
+import { tauriStorage } from '../lib/tauri-storage';
+import { TutorialFile, SeriesFile, scanBuiltinTutorials, scanWorkspaceTutorials, scanWorkspaceSeries, deriveSeries, BUILTIN_SERIES } from '../lib/tutorial-scanner';
 
 interface AppState {
   // Data
@@ -45,6 +48,7 @@ interface AppState {
   // Workspace State
   workspaces: Workspace[];
   currentWorkspace: Workspace | null;
+  defaultWorkspaceId: string | null;
   fileTree: FileNode[];
   selectedFile: FileNode | null;
   fileContent: string;
@@ -53,11 +57,17 @@ interface AppState {
   // Workspace Actions
   createWorkspace: (name: string, path: string) => void;
   deleteWorkspace: (id: string) => void;
+  setDefaultWorkspace: (id: string | null) => void;
   setCurrentWorkspace: (workspace: Workspace | null) => void;
   setFileTree: (tree: FileNode[]) => void;
   setSelectedFile: (file: FileNode | null) => void;
   setFileContent: (content: string) => void;
   setSelectedFolderPath: (path: string | null) => void;
+
+  // Discovered tutorials (from MDX frontmatter scanning)
+  discoveredTutorials: TutorialFile[];
+  discoveredSeries: SeriesFile[];
+  scanTutorials: () => Promise<void>;
 
   // Getters
   getFilteredTutorials: () => Tutorial[];
@@ -71,10 +81,15 @@ async function writeToPty(data: string) {
   if ("__TAURI_INTERNALS__" in window) {
     const { invoke } = await import("@tauri-apps/api/core");
     await invoke("pty_write", { data });
+  } else {
+    // Web fallback: dispatch event for the terminal panel to handle
+    window.dispatchEvent(new CustomEvent("web-pty-write", { detail: data }));
   }
 }
 
-export const useAppStore = create<AppState>((set, get) => ({
+export const useAppStore = create<AppState>()(
+  persist(
+    (set, get) => ({
   // Initial state
   tutorials: mockTutorials,
   series: mockSeries,
@@ -136,6 +151,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Workspace State
   workspaces: [],
   currentWorkspace: null,
+  defaultWorkspaceId: null,
   fileTree: [],
   selectedFile: null,
   fileContent: '',
@@ -146,12 +162,20 @@ export const useAppStore = create<AppState>((set, get) => ({
     const id = `ws-${Date.now()}`;
     const now = new Date().toISOString();
     const workspace: Workspace = { id, name, path, createdAt: now, updatedAt: now };
-    set((state) => ({ workspaces: [...state.workspaces, workspace] }));
+    set((state) => {
+      const isFirst = !state.defaultWorkspaceId;
+      return {
+        workspaces: [...state.workspaces, workspace],
+        ...(isFirst ? { defaultWorkspaceId: id } : {}),
+      };
+    });
   },
   deleteWorkspace: (id) => set((state) => ({
     workspaces: state.workspaces.filter((w) => w.id !== id),
     currentWorkspace: state.currentWorkspace?.id === id ? null : state.currentWorkspace,
+    defaultWorkspaceId: state.defaultWorkspaceId === id ? null : state.defaultWorkspaceId,
   })),
+  setDefaultWorkspace: (id) => set({ defaultWorkspaceId: id }),
   setCurrentWorkspace: (currentWorkspace) => set({
     currentWorkspace,
     fileTree: [],
@@ -163,6 +187,37 @@ export const useAppStore = create<AppState>((set, get) => ({
   setSelectedFile: (selectedFile) => set({ selectedFile, fileContent: '' }),
   setFileContent: (fileContent) => set({ fileContent }),
   setSelectedFolderPath: (selectedFolderPath) => set({ selectedFolderPath }),
+
+  // Discovered tutorials
+  discoveredTutorials: [],
+  discoveredSeries: [],
+  scanTutorials: async () => {
+    try {
+      const builtinTutorials = await scanBuiltinTutorials();
+      const state = get();
+      const workspacePath = state.currentWorkspace?.path || state.defaultWorkspaceId
+        ? state.workspaces.find((w: Workspace) => w.id === state.defaultWorkspaceId)?.path
+        : undefined;
+
+      let workspaceTutorials: TutorialFile[] = [];
+      let workspaceSeries: any[] = [];
+
+      if (workspacePath) {
+        workspaceTutorials = await scanWorkspaceTutorials(workspacePath);
+        workspaceSeries = await scanWorkspaceSeries(workspacePath);
+      }
+
+      // Merge: workspace tutorials override builtin with same slug
+      const slugSet = new Set(workspaceTutorials.map((t) => t.slug));
+      const merged = [...workspaceTutorials, ...builtinTutorials.filter((t) => !slugSet.has(t.slug))];
+
+      const allSeries = deriveSeries(merged, [...BUILTIN_SERIES, ...workspaceSeries]);
+
+      set({ discoveredTutorials: merged, discoveredSeries: allSeries });
+    } catch (e) {
+      console.error('[scanTutorials] failed:', e);
+    }
+  },
 
   // Getters
   getFilteredTutorials: () => {
@@ -183,4 +238,15 @@ export const useAppStore = create<AppState>((set, get) => ({
       .filter((t) => t.series === seriesId)
       .sort((a, b) => (a.order || 0) - (b.order || 0));
   },
-}));
+}),
+{
+  name: 'innate-playground-storage',
+  storage: tauriStorage,
+  partialize: (state) => ({
+    workspaces: state.workspaces,
+    progress: state.progress,
+    defaultWorkspaceId: state.defaultWorkspaceId,
+  }),
+}
+  )
+);

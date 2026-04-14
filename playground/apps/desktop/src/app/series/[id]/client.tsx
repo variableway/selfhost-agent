@@ -28,51 +28,30 @@ interface SeriesDetailClientProps {
 
 export default function SeriesDetailClient({ id }: SeriesDetailClientProps) {
   const router = useRouter();
-  const seriesId = id;
-  
-  const { series, getTutorialsBySeries, progress } = useAppStore();
-  
-  const currentSeries = series.find((s) => s.id === seriesId);
-  const tutorials = getTutorialsBySeries(seriesId);
-  
+
+  const { discoveredSeries, discoveredTutorials, progress } = useAppStore();
+
+  const currentSeries = discoveredSeries.find((s) => s.id === id);
+  const seriesTutorials = discoveredTutorials
+    .filter((t) => t.series === id)
+    .sort((a, b) => (a.seriesOrder || 0) - (b.seriesOrder || 0));
+
   if (!currentSeries) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-muted-foreground">系列不存在</div>
+      <div className="flex flex-col items-center justify-center h-full gap-4">
+        <p className="text-muted-foreground">系列不存在</p>
+        <Button variant="outline" onClick={() => router.push("/tutorials")}>
+          <ArrowLeft className="mr-2" size={16} />
+          返回教程列表
+        </Button>
       </div>
     );
   }
-  
-  const completedCount = tutorials.filter((t) => progress[t.id]?.completed).length;
-  const progressPercent = tutorials.length > 0 ? (completedCount / tutorials.length) * 100 : 0;
-  const totalDuration = tutorials.reduce((sum, t) => sum + t.duration, 0);
-  const nextTutorial = tutorials.find((t) => !progress[t.id]?.completed);
-  
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case "beginner":
-        return "from-emerald-500 to-teal-500";
-      case "intermediate":
-        return "from-amber-500 to-orange-500";
-      case "advanced":
-        return "from-rose-500 to-pink-500";
-      default:
-        return "from-primary to-secondary";
-    }
-  };
 
-  const getDifficultyText = (difficulty: string) => {
-    switch (difficulty) {
-      case "beginner":
-        return "入门";
-      case "intermediate":
-        return "进阶";
-      case "advanced":
-        return "高级";
-      default:
-        return "入门";
-    }
-  };
+  const completedCount = seriesTutorials.filter((t) => progress[t.slug]?.completed).length;
+  const progressPercent = seriesTutorials.length > 0 ? (completedCount / seriesTutorials.length) * 100 : 0;
+  const totalDuration = seriesTutorials.reduce((sum, t) => sum + t.duration, 0);
+  const nextTutorial = seriesTutorials.find((t) => !progress[t.slug]?.completed);
 
   return (
     <div className="flex flex-col h-full overflow-auto">
@@ -81,29 +60,29 @@ export default function SeriesDetailClient({ id }: SeriesDetailClientProps) {
         <div
           className="absolute inset-0 opacity-20"
           style={{
-            background: `linear-gradient(135deg, ${currentSeries.color}40 0%, transparent 60%)`,
+            background: `linear-gradient(135deg, ${currentSeries.color || '#3498db'}40 0%, transparent 60%)`,
           }}
         />
         <div
           className="absolute top-0 right-0 w-96 h-96 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4"
-          style={{ background: `${currentSeries.color}30` }}
+          style={{ background: `${currentSeries.color || '#3498db'}30` }}
         />
 
         <div className="relative px-8 py-8">
           <Button
             variant="ghost"
-            onClick={() => router.push("/")}
+            onClick={() => router.push("/tutorials")}
             className="mb-4"
           >
             <ArrowLeft className="mr-2" size={16} />
-            返回系列列表
+            返回教程列表
           </Button>
 
           <div className="flex flex-col md:flex-row md:items-start gap-6">
             <div
               className="w-20 h-20 rounded-2xl flex items-center justify-center text-4xl shrink-0"
               style={{
-                background: `linear-gradient(135deg, ${currentSeries.color}30 0%, ${currentSeries.color}50 100%)`,
+                background: `linear-gradient(135deg, ${currentSeries.color || '#3498db'}30 0%, ${currentSeries.color || '#3498db'}50 100%)`,
               }}
             >
               {currentSeries.icon || "📚"}
@@ -111,17 +90,9 @@ export default function SeriesDetailClient({ id }: SeriesDetailClientProps) {
 
             <div className="flex-1">
               <div className="flex flex-wrap items-center gap-3 mb-3">
-                <Badge
-                  className={`text-white bg-gradient-to-r ${getDifficultyColor(
-                    currentSeries.difficulty
-                  )}`}
-                >
-                  {getDifficultyText(currentSeries.difficulty)}
+                <Badge className="text-white bg-gradient-to-r from-primary to-secondary">
+                  {seriesTutorials.length} 个教程
                 </Badge>
-                <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <BookOpen size={14} />
-                  {tutorials.length} 个教程
-                </span>
                 <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
                   <Clock size={14} />
                   {totalDuration} 分钟
@@ -143,7 +114,7 @@ export default function SeriesDetailClient({ id }: SeriesDetailClientProps) {
                   <div className="flex items-center gap-2">
                     <span className="text-2xl font-bold text-primary">{Math.round(progressPercent)}%</span>
                     <span className="text-muted-foreground">
-                      ({completedCount}/{tutorials.length})
+                      ({completedCount}/{seriesTutorials.length})
                     </span>
                   </div>
                 </div>
@@ -156,7 +127,7 @@ export default function SeriesDetailClient({ id }: SeriesDetailClientProps) {
 
                 {nextTutorial && progressPercent < 100 && (
                   <Button
-                    onClick={() => router.push(`/tutorial/${nextTutorial.id}`)}
+                    onClick={() => router.push(`/tutorial/${nextTutorial.slug}`)}
                     className="mt-4 bg-gradient-to-r from-primary to-secondary"
                   >
                     <Play className="mr-2 fill-current" size={16} />
@@ -164,7 +135,7 @@ export default function SeriesDetailClient({ id }: SeriesDetailClientProps) {
                   </Button>
                 )}
 
-                {progressPercent === 100 && (
+                {progressPercent === 100 && seriesTutorials.length > 0 && (
                   <div className="mt-4 flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 rounded-xl">
                     <Trophy size={18} />
                     <span className="font-medium">恭喜！你已完成本系列所有教程</span>
@@ -188,15 +159,15 @@ export default function SeriesDetailClient({ id }: SeriesDetailClientProps) {
           </div>
         </div>
 
-        {tutorials.length > 0 ? (
+        {seriesTutorials.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {tutorials.map((tutorial) => {
-              const isCompleted = progress[tutorial.id]?.completed;
+            {seriesTutorials.map((tutorial) => {
+              const isCompleted = progress[tutorial.slug]?.completed;
               return (
                 <Card
-                  key={tutorial.id}
+                  key={tutorial.slug}
                   className="group cursor-pointer transition-all hover:shadow-lg hover:border-primary/50"
-                  onClick={() => router.push(`/tutorial/${tutorial.id}`)}
+                  onClick={() => router.push(`/tutorial/${tutorial.slug}`)}
                 >
                   <CardHeader className="pb-2">
                     <div className="flex items-start justify-between gap-3">
@@ -211,8 +182,13 @@ export default function SeriesDetailClient({ id }: SeriesDetailClientProps) {
                                 : "bg-rose-500/10 text-rose-500"
                             }`}
                           >
-                            {getDifficultyText(tutorial.difficulty)}
+                            {tutorial.difficulty === "beginner" ? "入门" : tutorial.difficulty === "intermediate" ? "进阶" : "高级"}
                           </Badge>
+                          {tutorial.seriesOrder && (
+                            <Badge variant="secondary" className="text-xs">
+                              #{tutorial.seriesOrder}
+                            </Badge>
+                          )}
                           {isCompleted && (
                             <Badge
                               variant="outline"

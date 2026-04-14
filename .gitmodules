@@ -1,3 +1,6 @@
 [submodule "hello-claw"]
 	path = hello-claw
 	url = https://github.com/datawhalechina/hello-claw.git
+[submodule "refernces/deeptutor"]
+	path = refernces/deeptutor
+	url = https://github.com/HKUDS/DeepTutor.git
