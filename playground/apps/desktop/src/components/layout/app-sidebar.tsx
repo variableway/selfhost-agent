@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAppStore } from "@/store/useAppStore";
 import {
   Bot,
@@ -26,9 +26,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
   SidebarRail,
   SidebarSeparator,
   DropdownMenu,
@@ -42,55 +39,65 @@ import {
 
 const adminItems = [
   { title: "Workspace", href: "/admin/workspace", icon: FolderKanban },
-  { title: "Lesson", href: "/admin/lesson", icon: GraduationCap },
+  { title: "课程中心", href: "/admin/courses", icon: GraduationCap },
   { title: "设置", href: "/settings", icon: Settings },
 ];
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const [platform, setPlatform] = useState("detecting...");
-  const { discoveredTutorials, discoveredSeries, scanTutorials } = useAppStore();
+  const { discoveredSkills, discoveredCourses, scanContent } = useAppStore();
+  const currentCourseId = pathname === "/courses/detail" ? searchParams.get("id") : null;
 
-  // Track which series are expanded
-  const [expandedSeries, setExpandedSeries] = useState<Record<string, boolean>>({});
+  // Track which courses are expanded
+  const [expandedCourses, setExpandedCourses] = useState<Record<string, boolean>>({});
   // Track which sidebar groups are collapsed
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    scanTutorials();
-  }, [scanTutorials]);
+    scanContent();
+  }, [scanContent]);
 
-  // Auto-expand series that contain the current tutorial
+  // Auto-expand course that contains the current skill
   useEffect(() => {
-    const currentTutorial = discoveredTutorials.find(
-      (t) => pathname === `/tutorial/${t.slug}`
-    );
-    if (currentTutorial?.series) {
-      setExpandedSeries((prev) => ({ ...prev, [currentTutorial.series!]: true }));
+    const currentSlug = pathname.startsWith("/tutorial/") ? pathname.split("/tutorial/")[1] : null;
+    if (currentSlug) {
+      const course = discoveredCourses.find((c) =>
+        c.skills?.some((cs) => cs.slug === currentSlug)
+      );
+      if (course) {
+        setExpandedCourses((prev) => ({ ...prev, [course.id]: true }));
+      }
     }
-  }, [pathname, discoveredTutorials]);
+  }, [pathname, discoveredCourses]);
 
-  const toggleSeries = (seriesId: string) => {
-    setExpandedSeries((prev) => ({ ...prev, [seriesId]: !prev[seriesId] }));
+  const toggleCourse = (courseId: string) => {
+    setExpandedCourses((prev) => ({ ...prev, [courseId]: !prev[courseId] }));
   };
 
   const toggleGroup = (groupId: string) => {
     setCollapsedGroups((prev) => ({ ...prev, [groupId]: !prev[groupId] }));
   };
 
-  // Series with tutorials
-  const seriesWithTutorials = discoveredSeries
-    .filter((s) => discoveredTutorials.some((t) => t.series === s.id))
-    .map((s) => ({
-      ...s,
-      tutorials: discoveredTutorials
-        .filter((t) => t.series === s.id)
-        .sort((a, b) => (a.seriesOrder || 0) - (b.seriesOrder || 0)),
-    }));
+  // Courses with skills
+  const coursesWithSkills = discoveredCourses
+    .filter((c) => c.skills && c.skills.length > 0)
+    .map((c) => ({
+      ...c,
+      resolvedSkills: c.skills!
+        .sort((a, b) => a.order - b.order)
+        .map((cs) => discoveredSkills.find((s) => s.slug === cs.slug))
+        .filter((s): s is NonNullable<typeof s> => !!s),
+    }))
+    .filter((c) => c.resolvedSkills.length > 0);
 
-  // Tutorials without a series
-  const ungroupedTutorials = discoveredTutorials.filter((t) => !t.series);
+  // Skills not in any course
+  const allCourseSlugs = new Set(
+    discoveredCourses.flatMap((c) => c.skills?.map((cs) => cs.slug) || [])
+  );
+  const ungroupedSkills = discoveredSkills.filter((s) => !allCourseSlugs.has(s.slug));
 
   useEffect(() => {
     if ("__TAURI_INTERNALS__" in window) {
@@ -165,52 +172,52 @@ export function AppSidebar() {
 
         <SidebarSeparator />
 
-        {/* Series as collapsible first-level items */}
+        {/* Courses as collapsible first-level items */}
         <SidebarGroup>
           <SidebarGroupLabel
             className="cursor-pointer select-none"
-            onClick={() => toggleGroup("series")}
+            onClick={() => toggleGroup("courses")}
           >
-            系列课程
-            <ChevronRight className={`ml-auto size-3 transition-transform duration-200 ${collapsedGroups["series"] ? "" : "rotate-90"}`} />
+            课程
+            <ChevronRight className={`ml-auto size-3 transition-transform duration-200 ${collapsedGroups["courses"] ? "" : "rotate-90"}`} />
           </SidebarGroupLabel>
-          {!collapsedGroups["series"] && (
+          {!collapsedGroups["courses"] && (
           <SidebarGroupContent>
             <SidebarMenu>
-              {seriesWithTutorials.map((series) => (
+              {coursesWithSkills.map((course) => (
                 <Collapsible
-                  key={series.id}
-                  open={expandedSeries[series.id] ?? false}
-                  onOpenChange={() => toggleSeries(series.id)}
+                  key={course.id}
+                  open={expandedCourses[course.id] ?? false}
+                  onOpenChange={() => toggleCourse(course.id)}
                   asChild
                 >
                   <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
                       <SidebarMenuButton
-                        tooltip={series.title}
-                        isActive={pathname.startsWith(`/series/${series.id}`)}
+                        tooltip={course.title}
+                        isActive={currentCourseId === course.id}
                       >
-                        <span className="text-sm">{series.icon || "📘"}</span>
-                        <span>{series.title}</span>
+                        <span className="text-sm">{course.icon || "📘"}</span>
+                        <span>{course.title}</span>
                         <ChevronRight className={`ml-auto size-4 transition-transform duration-200 ${
-                          expandedSeries[series.id] ? "rotate-90" : ""
+                          expandedCourses[course.id] ? "rotate-90" : ""
                         }`} />
                       </SidebarMenuButton>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <ul className="ml-5 mt-1 flex flex-col gap-0.5 border-l-2 border-primary/15 pl-3">
-                        {series.tutorials.map((tutorial, idx) => (
-                          <li key={tutorial.slug}>
+                        {course.resolvedSkills.map((skill, idx) => (
+                          <li key={skill.slug}>
                             <button
-                              onClick={() => router.push(`/tutorial/${tutorial.slug}`)}
+                              onClick={() => router.push(`/tutorial/${skill.slug}`)}
                               className={`flex w-full items-center gap-2 rounded-md px-2 py-1 text-[13px] transition-colors ${
-                                pathname === `/tutorial/${tutorial.slug}`
+                                pathname === `/tutorial/${skill.slug}`
                                   ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                                   : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground"
                               }`}
                             >
                               <span className="size-4 flex items-center justify-center text-[10px] text-muted-foreground/60 font-mono shrink-0">{idx + 1}</span>
-                              <span className="truncate">{tutorial.title}</span>
+                              <span className="truncate">{skill.title}</span>
                             </button>
                           </li>
                         ))}
@@ -220,16 +227,16 @@ export function AppSidebar() {
                 </Collapsible>
               ))}
 
-              {/* Ungrouped tutorials */}
-              {ungroupedTutorials.map((tutorial) => (
-                <SidebarMenuItem key={tutorial.slug}>
+              {/* Ungrouped skills */}
+              {ungroupedSkills.map((skill) => (
+                <SidebarMenuItem key={skill.slug}>
                   <SidebarMenuButton
-                    isActive={pathname === `/tutorial/${tutorial.slug}`}
-                    tooltip={tutorial.title}
-                    onClick={() => router.push(`/tutorial/${tutorial.slug}`)}
+                    isActive={pathname === `/tutorial/${skill.slug}`}
+                    tooltip={skill.title}
+                    onClick={() => router.push(`/tutorial/${skill.slug}`)}
                   >
                     <FileText className="size-4" />
-                    <span>{tutorial.title}</span>
+                    <span>{skill.title}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}

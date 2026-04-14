@@ -15,7 +15,7 @@ import { MDXRemote, MDXRemoteSerializeResult } from "next-mdx-remote";
 import { serialize } from "next-mdx-remote/serialize";
 import remarkGfm from "remark-gfm";
 import { RunButton } from "@/components/tutorial/run-button";
-import { loadTutorialContent, parseFrontmatter, TutorialFile } from "@/lib/tutorial-scanner";
+import { loadSkillContent, parseFrontmatter, SkillFile } from "@/lib/tutorial-scanner";
 
 interface TutorialDetailClientProps {
   id: string;
@@ -110,9 +110,9 @@ export default function TutorialDetailClient({ id }: TutorialDetailClientProps) 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mdxSource, setMdxSource] = useState<MDXRemoteSerializeResult | null>(null);
-  const [meta, setMeta] = useState<TutorialFile | null>(null);
+  const [meta, setMeta] = useState<SkillFile | null>(null);
 
-  const { discoveredTutorials, tutorials, updateProgress, progress } = useAppStore();
+  const { discoveredSkills, updateProgress, progress } = useAppStore();
   const tutorialProgress = progress[slug];
 
   // Load MDX content
@@ -127,17 +127,17 @@ export default function TutorialDetailClient({ id }: TutorialDetailClientProps) 
         const workspacePath = state.currentWorkspace?.path ||
           (state.defaultWorkspaceId ? state.workspaces.find((w) => w.id === state.defaultWorkspaceId)?.path : undefined);
 
-        const result = await loadTutorialContent(slug, workspacePath);
+        const result = await loadSkillContent(slug, workspacePath);
         if (!result) {
-          setError("教程内容未找到");
+          setError("技能内容未找到");
           return;
         }
 
         const { frontmatter, body } = parseFrontmatter(result.content);
 
         // Set metadata
-        const tutorialMeta = discoveredTutorials.find((t) => t.slug === slug);
-        setMeta(tutorialMeta || {
+        const skillMeta = discoveredSkills.find((t) => t.slug === slug);
+        setMeta(skillMeta || {
           slug,
           title: frontmatter.title || slug,
           description: frontmatter.description || '',
@@ -146,7 +146,7 @@ export default function TutorialDetailClient({ id }: TutorialDetailClientProps) 
           category: frontmatter.category || 'general',
           tags: frontmatter.tags || [],
           source: result.source,
-        } as TutorialFile);
+        } as SkillFile);
 
         // Serialize MDX body
         const serialized = await serialize(body, {
@@ -164,11 +164,11 @@ export default function TutorialDetailClient({ id }: TutorialDetailClientProps) 
       }
     }
     load();
-  }, [slug, discoveredTutorials]);
+  }, [slug, discoveredSkills]);
 
   const handleMarkComplete = () => {
     updateProgress({
-      tutorialId: slug,
+      skillId: slug,
       completed: true,
       completedSections: [],
       completedAt: new Date().toISOString(),
@@ -177,7 +177,7 @@ export default function TutorialDetailClient({ id }: TutorialDetailClientProps) 
 
   const handleReset = () => {
     updateProgress({
-      tutorialId: slug,
+      skillId: slug,
       completed: false,
       completedSections: [],
     });
@@ -200,7 +200,7 @@ export default function TutorialDetailClient({ id }: TutorialDetailClientProps) 
       <div className="flex items-center justify-center h-full">
         <div className="flex items-center gap-3">
           <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          <span className="text-muted-foreground">加载教程...</span>
+          <span className="text-muted-foreground">加载技能...</span>
         </div>
       </div>
     );
@@ -294,11 +294,11 @@ export default function TutorialDetailClient({ id }: TutorialDetailClientProps) 
               </div>
               <div className="flex-1">
                 <h3 className="text-lg font-bold mb-1">
-                  {tutorialProgress?.completed ? "想要学习更多？" : "完成本教程！"}
+                  {tutorialProgress?.completed ? "想要学习更多？" : "完成本技能！"}
                 </h3>
                 <p className="text-muted-foreground">
                   {tutorialProgress?.completed
-                    ? "继续探索系列中的其他教程，提升你的技能。"
+                    ? "继续探索课程中的其他技能，提升你的能力。"
                     : "完成上面的步骤，然后点击\"标记完成\"按钮。"}
                 </p>
               </div>

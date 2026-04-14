@@ -10,10 +10,30 @@
     "dialog:default",
     "dialog:allow-open",
     "fs:default",
-    "fs:allow-read-dir",
-    "fs:allow-read-file",
-    "fs:allow-mkdir",
-    "fs:allow-exists",
+    {
+      "identifier": "fs:allow-read-dir",
+      "allow": [{ "path": "$HOME/**" }]
+    },
+    {
+      "identifier": "fs:allow-read-file",
+      "allow": [{ "path": "$HOME/**" }]
+    },
+    {
+      "identifier": "fs:allow-mkdir",
+      "allow": [{ "path": "$HOME/**" }]
+    },
+    {
+      "identifier": "fs:allow-exists",
+      "allow": [{ "path": "$HOME/**" }]
+    },
+    {
+      "identifier": "fs:allow-write-file",
+      "allow": [{ "path": "$HOME/**" }]
+    },
+    {
+      "identifier": "fs:allow-remove",
+      "allow": [{ "path": "$HOME/**" }]
+    },
     "store:default",
     "shell:allow-execute",
     "shell:allow-spawn",

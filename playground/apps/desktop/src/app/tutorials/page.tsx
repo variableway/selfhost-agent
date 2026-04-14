@@ -14,19 +14,20 @@ import {
   FileText,
   Sparkles,
   FolderOpen,
+  Pencil,
 } from "lucide-react";
 
 export default function TutorialsPage() {
   const router = useRouter();
-  const { discoveredTutorials, discoveredSeries, progress, scanTutorials } = useAppStore();
+  const { discoveredSkills, discoveredCourses, progress, scanContent, getCoursesForSkill } = useAppStore();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedSeries, setSelectedSeries] = useState<string | null>(null);
+  const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    scanTutorials();
-  }, [scanTutorials]);
+    scanContent();
+  }, [scanContent]);
 
   if (!mounted) {
     return (
@@ -39,12 +40,15 @@ export default function TutorialsPage() {
     );
   }
 
-  const filtered = discoveredTutorials.filter((t) => {
+  const filtered = discoveredSkills.filter((skill) => {
     const matchesSearch = !searchQuery ||
-      t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesSeries = !selectedSeries || t.series === selectedSeries;
-    return matchesSearch && matchesSeries;
+      skill.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      skill.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCourse = !selectedCourse ||
+      discoveredCourses
+        .find((c) => c.id === selectedCourse)
+        ?.skills?.some((cs) => cs.slug === skill.slug);
+    return matchesSearch && matchesCourse;
   });
 
   const getDifficultyConfig = (d: string) => {
@@ -66,9 +70,9 @@ export default function TutorialsPage() {
               <BookOpen className="text-primary" size={20} />
             </div>
             <div>
-              <h1 className="text-xl font-bold">教程中心</h1>
+              <h1 className="text-xl font-bold">技能中心</h1>
               <p className="text-sm text-muted-foreground">
-                {discoveredTutorials.length} 个教程 · {discoveredSeries.length} 个系列
+                {discoveredSkills.length} 个技能 · {discoveredCourses.length} 个课程
               </p>
             </div>
           </div>
@@ -80,7 +84,7 @@ export default function TutorialsPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
             <Input
               type="text"
-              placeholder="搜索教程..."
+              placeholder="搜索技能..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
@@ -88,24 +92,26 @@ export default function TutorialsPage() {
           </div>
           <div className="flex items-center gap-2">
             <Button
-              variant={selectedSeries === null ? "default" : "outline"}
+              variant={selectedCourse === null ? "default" : "outline"}
               size="sm"
-              onClick={() => setSelectedSeries(null)}
+              onClick={() => setSelectedCourse(null)}
             >
               全部
             </Button>
-            {discoveredSeries.map((s) => {
-              const count = discoveredTutorials.filter((t) => t.series === s.id).length;
+            {discoveredCourses.map((c) => {
+              const count = discoveredSkills.filter((skill) =>
+                c.skills?.some((cs) => cs.slug === skill.slug)
+              ).length;
               if (count === 0) return null;
               return (
                 <Button
-                  key={s.id}
-                  variant={selectedSeries === s.id ? "default" : "outline"}
+                  key={c.id}
+                  variant={selectedCourse === c.id ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setSelectedSeries(selectedSeries === s.id ? null : s.id)}
+                  onClick={() => setSelectedCourse(selectedCourse === c.id ? null : c.id)}
                   className="gap-1"
                 >
-                  {s.icon} {s.title}
+                  {c.icon} {c.title}
                   <Badge variant="secondary" className="text-xs ml-1">{count}</Badge>
                 </Button>
               );
@@ -118,18 +124,17 @@ export default function TutorialsPage() {
       <div className="flex-1 px-8 py-6">
         {filtered.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filtered.map((tutorial) => {
-              const isCompleted = progress[tutorial.slug]?.completed;
-              const diff = getDifficultyConfig(tutorial.difficulty);
-              const seriesInfo = tutorial.series
-                ? discoveredSeries.find((s) => s.id === tutorial.series)
-                : null;
+            {filtered.map((skill) => {
+              const isCompleted = progress[skill.slug]?.completed;
+              const diff = getDifficultyConfig(skill.difficulty);
+              const coursesForSkill = getCoursesForSkill(skill.slug);
+              const courseInfo = coursesForSkill.length > 0 ? coursesForSkill[0] : null;
 
               return (
                 <div
-                  key={tutorial.slug}
+                  key={skill.slug}
                   className="group cursor-pointer border rounded-lg p-4 transition-all hover:shadow-lg hover:border-primary/50"
-                  onClick={() => router.push(`/tutorial/${tutorial.slug}`)}
+                  onClick={() => router.push(`/tutorial/${skill.slug}`)}
                 >
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="flex-1 min-w-0">
@@ -145,7 +150,7 @@ export default function TutorialsPage() {
                         )}
                       </div>
                       <h3 className="font-medium truncate group-hover:text-primary transition-colors">
-                        {tutorial.title}
+                        {skill.title}
                       </h3>
                     </div>
                     <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
@@ -158,31 +163,44 @@ export default function TutorialsPage() {
                   </div>
 
                   <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                    {tutorial.description}
+                    {skill.description}
                   </p>
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Clock size={12} />
-                        {tutorial.duration} 分钟
+                        {skill.duration} 分钟
                       </span>
-                      {seriesInfo && (
-                        <span>{seriesInfo.icon} {seriesInfo.title}</span>
+                      {courseInfo && (
+                        <span>{courseInfo.icon} {courseInfo.title}</span>
                       )}
                     </div>
-                    <Button
-                      size="sm"
-                      variant={isCompleted ? "outline" : "default"}
-                      className={`text-xs h-7 ${
-                        isCompleted
-                          ? "text-emerald-500 border-emerald-500/20"
-                          : "bg-gradient-to-r from-primary to-secondary opacity-0 group-hover:opacity-100 transition-opacity"
-                      }`}
-                    >
-                      <Play className="w-3 h-3 mr-1 fill-current" />
-                      {isCompleted ? "复习" : "开始"}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-xs h-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/tutorial/edit?slug=${skill.slug}`);
+                        }}
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={isCompleted ? "outline" : "default"}
+                        className={`text-xs h-7 ${
+                          isCompleted
+                            ? "text-emerald-500 border-emerald-500/20"
+                            : "bg-gradient-to-r from-primary to-secondary opacity-0 group-hover:opacity-100 transition-opacity"
+                        }`}
+                      >
+                        <Play className="w-3 h-3 mr-1 fill-current" />
+                        {isCompleted ? "复习" : "开始"}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               );
@@ -192,12 +210,12 @@ export default function TutorialsPage() {
           <div className="text-center py-16 bg-card rounded-2xl border border-dashed">
             <FileText size={48} className="mx-auto mb-4 text-muted-foreground opacity-50" />
             <p className="text-muted-foreground">
-              {searchQuery || selectedSeries ? "没有找到匹配的教程" : "暂无教程"}
+              {searchQuery || selectedCourse ? "没有找到匹配的技能" : "暂无技能"}
             </p>
-            {(searchQuery || selectedSeries) && (
+            {(searchQuery || selectedCourse) && (
               <Button
                 variant="link"
-                onClick={() => { setSearchQuery(""); setSelectedSeries(null); }}
+                onClick={() => { setSearchQuery(""); setSelectedCourse(null); }}
               >
                 清除筛选条件
               </Button>

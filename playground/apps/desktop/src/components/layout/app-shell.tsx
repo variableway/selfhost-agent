@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, Suspense, useEffect, useState } from "react";
 import { SidebarProvider, SidebarInset } from "@innate/ui";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { MenuBar } from "@/components/layout/menu-bar";
@@ -30,7 +30,7 @@ function AppShellContent({ children }: { children: ReactNode }) {
 
   return (
     <SidebarProvider>
-      <AppSidebar />
+      <Suspense><AppSidebar /></Suspense>
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Menu Bar */}
         <MenuBar />

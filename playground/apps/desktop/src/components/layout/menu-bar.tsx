@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { Button } from "@innate/ui";
 
-type Tab = "home" | "tutorials" | "series" | "admin" | "settings";
+type Tab = "home" | "tutorials" | "courses" | "admin" | "settings";
 
 export function MenuBar() {
   const pathname = usePathname();
@@ -29,9 +29,8 @@ export function MenuBar() {
 
   const getActiveTab = (): Tab => {
     if (pathname === "/") return "home";
-    if (pathname === "/tutorials") return "tutorials";
     if (pathname.startsWith("/tutorial")) return "tutorials";
-    if (pathname.startsWith("/series")) return "series";
+    if (pathname.startsWith("/courses")) return "courses";
     if (pathname.startsWith("/admin")) return "admin";
     if (pathname.startsWith("/settings")) return "settings";
     return "home";
@@ -43,7 +42,7 @@ export function MenuBar() {
     const routes: Record<Tab, string> = {
       home: "/",
       tutorials: "/tutorials",
-      series: "/tutorials",
+      courses: "/courses",
       admin: "/admin/workspace",
       settings: "/settings",
     };
@@ -59,8 +58,8 @@ export function MenuBar() {
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode; description: string }[] = [
     { id: "home", label: "首页", icon: <Home size={18} />, description: "浏览推荐内容" },
-    { id: "tutorials", label: "教程", icon: <BookOpen size={18} />, description: "所有教程" },
-    { id: "series", label: "系列", icon: <FolderOpen size={18} />, description: "课程系列" },
+    { id: "courses", label: "课程", icon: <FolderOpen size={18} />, description: "课程中心" },
+    { id: "tutorials", label: "技能", icon: <BookOpen size={18} />, description: "所有技能" },
     { id: "admin", label: "管理", icon: <Shield size={18} />, description: "工作区与课程" },
     { id: "settings", label: "设置", icon: <Settings size={18} />, description: "应用设置" },
   ];
@@ -126,7 +125,7 @@ export function MenuBar() {
           />
           <input
             type="text"
-            placeholder="搜索教程、系列..."
+            placeholder="搜索技能、课程..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onFocus={() => setIsSearchFocused(true)}
