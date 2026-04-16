@@ -2,21 +2,35 @@
 
 从用户视角分析如何使用小龙虾（OpenClaw Agent + GLM API）解决实际问题的用例集合。
 
+## 核心入口
+
+```
+📝 随手记（万能入口）── 一个输入框，AI 自动分类
+  ├─ 文字 → todo/记账/心情/日程/笔记
+  ├─ 图片 → 食物识别/识物/此刻记录
+  ├─ 链接 → XHS/知乎/任意 URL 内容分析
+  └─ 语音 → 任意上述类型
+```
+
 ## 优先级排序（按落地顺序）
 
 ```
-Phase 1 (P0) ── 📸 拍照识热量  +  💰 自然语言记账
-Phase 2 (P1) ── 📸 拍照识物    +  🍜 每周食谱  +  💰 月度报告
-Phase 3 (P2) ── 扩展场景（穿搭、健康、知识管理等）
+Phase 0 (P0) ── 📝 随手记 + 📸 拍照秒识
+Phase 1 (P1) ── 💰 记账 + 🍜 食谱 + 📱 XHS 分析
+Phase 2 (P2) ── 扩展场景（穿搭、健康、知识管理等）
 ```
 
 ## 文件索引
 
-### 分析文件
+### 设计与策略
 
-| 文件 | 话题 | 说明 |
-|------|------|------|
-| [4-prioritization-analysis.md](./4-prioritization-analysis.md) | **优先级筛选** | 为什么选这 3 个话题、评分框架、象限分析、落地顺序 |
+| 文件 | 说明 |
+|------|------|
+| [4-prioritization-analysis.md](./4-prioritization-analysis.md) | 优先级筛选：评分框架、落地顺序 |
+| [10-feature-discovery-and-entry.md](./10-feature-discovery-and-entry.md) | 用户发现与入口设计 |
+| [11-instant-wow-scenarios.md](./11-instant-wow-scenarios.md) | 即刻可见的 5 个场景 |
+| [**12-casual-record-everything.md**](./12-casual-record-everything.md) | **随手记：万能入口，用户只管发，AI 来分** |
+| [13-social-browsing-analysis.md](./13-social-browsing-analysis.md) | XHS/社交媒体浏览分析 |
 
 ### 具体 Use Case（按落地顺序）
 
@@ -47,11 +61,13 @@ Phase 3 (P2) ── 扩展场景（穿搭、健康、知识管理等）
 ## Use Case 之间的联动
 
 ```
-📸拍照识热量 ←→ 💰记账 ←→ 💰月度报告
-       ↕                ↕
-📸拍照识物    ←→ 🍜食谱生成
-       ↕
-   冰箱清理 → 剩菜推荐 → 食谱调整
+📝随手记（万能入口）
+  ├→ 📸拍照 → 识热量/识物/此刻
+  ├→ 💰记账 → 月度报告/预算
+  ├→ 📱XHS链接 → 内容分析/收藏/Todo
+  ├→ 😊心情 → 情绪曲线/周报
+  ├→ ✅Todo → 提醒/完成追踪
+  └→ 🍜食谱 → 购物清单/饮食记录
 ```
 
 > 来源：tasks/analysis/user-use-case/
