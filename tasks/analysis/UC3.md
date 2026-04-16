@@ -24,6 +24,6 @@ verification point:
 2. create a section of a lesson, select the lesson and the topic, upload the md,mdx file,create successfully
 3. the lesson should be displayed in the tutorial page 
 
-## 
+
 
 

@@ -1,0 +1,140 @@
+---
+title: 第十一章 Web 界面与客户端
+description: 网页版、桌面版、终端 UI——总有一款适合你
+difficulty: beginner
+duration: 10
+category: ai-agent
+tags: [openclaw, ai, dashboard, web, 客户端]
+course: exec-helloclaw
+courseOrder: 11
+source: builtin
+---
+
+# 第十一章 Web 界面与客户端
+
+> 终端太硬核？本章介绍龙虾的各种图形界面——网页版、桌面版、终端 UI，总有一款适合你。
+
+## 0. 选一款你喜欢的方式
+
+四种原生界面，全部连接同一个 Gateway，可以随意切换或同时使用：
+
+| 界面 | 怎么打开 | 一句话描述 | 平台 |
+|------|---------|-----------|------|
+| **Dashboard** | `openclaw dashboard` | 管理配置、查对话历史的控制台 | 全平台 |
+| **WebChat** | 浏览器访问 Gateway 地址 | 零配置，开箱即聊 | 全平台 |
+| **Control UI** | 打开 OpenClaw.app | macOS 原生桌面体验 | macOS |
+| **TUI** | `openclaw tui` | 终端里直接聊，最轻量 | 全平台 |
+
+**不知道选哪个？** 想管配置 → Dashboard；想聊天 → WebChat；macOS 用户 → Control UI；SSH 远程 → TUI。
+
+## 1. Web Dashboard（控制面板）
+
+Dashboard 是 OpenClaw 的主力管理界面，运行在浏览器里。
+
+<RunButton command="openclaw dashboard" />
+
+浏览器自动打开 `http://localhost:18789`。
+
+### 功能区一览
+
+| 功能区 | 说明 |
+|--------|------|
+| **Config** | 可视化编辑配置，保存即生效 |
+| **Conversations** | 查看对话历史、消息详情、工具调用记录 |
+| **Channels** | 查看已连接渠道的状态 |
+| **Sessions** | 管理活跃会话和上下文 |
+| **Skills** | 按状态过滤浏览技能 |
+| **Cron** | 查看和管理定时任务 |
+| **Logs** | 实时查看 Gateway 日志流 |
+
+### 远程访问
+
+Gateway 在远程服务器上时，用 SSH 隧道把端口转到本地：
+
+```bash
+# 在本地电脑执行
+ssh -N -L 18789:127.0.0.1:18789 user@远程服务器
+# 然后浏览器打开 http://localhost:18789
+```
+
+## 2. WebChat（网页聊天）
+
+WebChat 是 Gateway 内置的网页聊天界面，零配置直接使用。
+
+浏览器访问 `http://localhost:18789`，切换到 **WebChat** 标签即可。
+
+特点：
+- 不需要任何聊天平台
+- 支持文件上传
+- 支持 Markdown 渲染
+- 支持代码高亮
+
+## 3. Control UI（macOS 桌面应用）
+
+macOS 用户可以安装 OpenClaw.app，提供原生桌面体验：
+
+- 菜单栏常驻
+- 系统通知集成
+- 语音唤醒（Voice Wake）
+- 摄像头和屏幕共享
+- 自动启动 Gateway
+
+安装方式：从 [AutoClaw 官网](https://autoglm.zhipuai.cn/autoclaw) 下载 macOS 版本。
+
+## 4. TUI（终端用户界面）
+
+最轻量的方式——直接在终端里和龙虾对话：
+
+<RunButton command="openclaw tui" />
+
+特点：
+- 零依赖，装好 CLI 就能用
+- SSH 远程使用最佳选择
+- 支持 Markdown 渲染
+- 支持多会话切换
+
+### TUI 快捷键
+
+| 快捷键 | 功能 |
+|--------|------|
+| `Enter` | 发送消息 |
+| `Ctrl+C` | 中止当前生成 |
+| `/new` | 新建会话 |
+| `/model` | 切换模型 |
+| `/compact` | 压缩上下文 |
+| `/help` | 查看帮助 |
+
+## 5. 移动端
+
+通过聊天平台间接使用：
+
+| 方式 | 说明 |
+|------|------|
+| **飞书 / Lark** | 移动端原生体验 |
+| **Telegram** | 随时随地对话 |
+| **WhatsApp** | 全球通用 |
+| **Discord** | 社区场景 |
+
+配置方式见 [第四章 聊天平台接入](./04-chat-platforms)。
+
+## 常见问题
+
+**Dashboard 打不开？** 确认 Gateway 正在运行：
+
+<RunButton command="openclaw gateway status" />
+
+**WebChat 发消息没反应？** 检查模型是否配置正确：
+
+<RunButton command="openclaw models status" />
+
+**TUI 中文乱码？** 确保终端编码设置为 UTF-8。
+
+## 完成检查
+
+- [ ] 已选择适合自己的界面
+- [ ] Dashboard 可以正常打开
+- [ ] 能通过至少一种界面与龙虾对话
+
+---
+
+*内容来源：[hello-claw](https://github.com/datawhalechina/hello-claw) | CC BY-NC-SA 4.0*

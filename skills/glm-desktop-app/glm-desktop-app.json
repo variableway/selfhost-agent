@@ -1,0 +1,108 @@
+{
+  "id": "glm-desktop-app",
+  "name": "开发 GLM 桌面/Web 应用",
+  "version": "1.0.0",
+  "description": "基于 Tauri 2.x + Next.js + 智谱 GLM API 开发 AI 桌面/Web 应用，涵盖 API 配置、项目搭建、聊天界面、流式输出、Markdown 渲染等核心功能",
+  "level": "intermediate",
+  "platform": ["macos", "windows", "linux"],
+  "prerequisites": [
+    "Node.js 18+ (推荐使用 fnm 安装)",
+    "pnpm 10+ (npm install -g pnpm)",
+    "智谱 GLM API Key (从 https://open.bigmodel.cn/ 获取)",
+    "基础 React/Next.js 知识",
+    "基础 TypeScript 知识"
+  ],
+  "steps": [
+    {
+      "order": 1,
+      "title": "配置 GLM API Key",
+      "description": "运行一键配置脚本，将 GLM API Key 写入环境变量和 Claude Code 配置",
+      "action": {
+        "type": "script",
+        "command": "./scripts/configure/setup-glm.sh",
+        "expected_output": "配置完成!",
+        "documentation": "脚本会自动完成以下操作:\n1. 提示输入 GLM API Key\n2. 写入 ~/.zshrc 或 ~/.bashrc 的 ANTHROPIC_AUTH_TOKEN\n3. 创建 ~/.claude/settings.json，配置:\n   - ANTHROPIC_BASE_URL: https://open.bigmodel.cn/api/coding/paas/v4\n   - ANTHROPIC_DEFAULT_HAIKU_MODEL: GLM-4.5-air\n   - ANTHROPIC_DEFAULT_SONNET_MODEL: GLM-5.1\n   - ANTHROPIC_DEFAULT_OPUS_MODEL: GLM-5.1\n4. 执行 source ~/.zshrc 使环境变量生效"
+      }
+    },
+    {
+      "order": 2,
+      "title": "初始化项目工作区",
+      "description": "克隆或进入项目目录，安装依赖",
+      "action": {
+        "type": "script",
+        "command": "cd playground && pnpm install",
+        "expected_output": "Done in",
+        "documentation": "项目使用 pnpm workspace 管理 monorepo:\n- playground/package.json: workspace 根配置 (pnpm@10.32.1)\n- playground/apps/desktop/: Tauri + Next.js 桌面应用\n- packages/ui: shadcn/ui 共享组件库\n- packages/utils: 工具函数 (cn 等)\n- packages/tsconfig: 共享 TypeScript 配置\n\n安装完成后可使用 pnpm dev 启动 Web 开发模式"
+      }
+    },
+    {
+      "order": 3,
+      "title": "创建 GLM API 调用模块",
+      "description": "封装 GLM API 调用逻辑，支持流式输出和错误处理",
+      "action": {
+        "type": "manual",
+        "documentation": "在 src/lib/glm-client.ts 中创建 API 调用模块:\n\n1. 配置 API 端点和认证:\n   const BASE_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions'\n   const API_KEY = process.env.ANTHROPIC_AUTH_TOKEN\n\n2. 支持的模型:\n   - GLM-4.5-air: 轻量快速模型 (haiku 级别)\n   - GLM-5.1: 旗舰模型 (sonnet/opus 级别)\n\n3. 实现 streamChat() 流式调用:\n   - 使用 fetch + ReadableStream 读取 SSE 响应\n   - 解析 data: {\"choices\":[{\"delta\":{\"content\":\"...\"}}]}\n   - 通过回调函数实时输出文本片段\n\n4. 实现 chat() 非流式调用:\n   - 适用于简单问答场景\n   - 返回完整响应文本\n\n5. 错误处理:\n   - API Key 无效 → 提示重新配置\n   - 网络超时 → 自动重试 1 次\n   - 速率限制 → 提示稍后再试"
+      }
+    },
+    {
+      "order": 4,
+      "title": "构建聊天界面组件",
+      "description": "创建 ChatPanel 聊天组件，包含消息列表、输入框、发送按钮",
+      "action": {
+        "type": "manual",
+        "documentation": "在 src/components/chat/ 下创建组件:\n\n1. chat-panel.tsx — 聊天主面板:\n   - 使用 Zustand store 管理消息状态\n   - messages: Array<{role: 'user'|'assistant', content: string}>\n   - 消息列表自动滚动到底部 (useRef + scrollIntoView)\n   - 输入框支持 Enter 发送 / Shift+Enter 换行\n\n2. chat-message.tsx — 单条消息组件:\n   - 用户消息: 右对齐，蓝色背景\n   - AI 消息: 左对齐，灰色背景，使用 react-markdown 渲染\n   - 代码块: highlight.js 语法高亮 + 一键复制按钮\n\n3. chat-input.tsx — 输入区域:\n   - Textarea 自适应高度 (autosize)\n   - 发送按钮 + 模型选择下拉框 (GLM-4.5-air / GLM-5.1)\n   - 发送中显示 loading 状态，禁用输入\n\n关键依赖:\n  react-markdown, remark-gfm, rehype-highlight, zustand"
+      }
+    },
+    {
+      "order": 5,
+      "title": "实现流式对话功能",
+      "description": "将 GLM API 流式输出与聊天界面连接，实现打字机效果",
+      "action": {
+        "type": "manual",
+        "documentation": "在 src/hooks/use-chat-stream.ts 中实现:\n\n1. useChatStream 自定义 Hook:\n   const { sendMessage, isLoading, error } = useChatStream(model)\n\n2. 核心流程:\n   a. 用户输入 → addMessage({role:'user', content})\n   b. 添加空的 assistant 消息 → addMessage({role:'assistant', content:''})\n   c. 调用 streamChat() → 逐片段更新最后一条 assistant 消息\n   d. 更新 store → UI 自动渲染 (打字机效果)\n\n3. 取消功能:\n   - 使用 AbortController\n   - 点击取消按钮 → controller.abort()\n   - 清理未完成的消息\n\n4. 错误恢复:\n   - 流式中断 → 保留已接收的内容\n   - 显示错误提示 + 重试按钮\n\n数据流:\n  用户输入 → useChatStream → streamChat(GLM API) → SSE 响应\n  → 解析 delta.content → updateMessage → ChatPanel 渲染"
+      }
+    },
+    {
+      "order": 6,
+      "title": "集成到应用布局",
+      "description": "将聊天面板集成到 App Shell 布局，支持侧边栏导航切换",
+      "action": {
+        "type": "manual",
+        "documentation": "集成到现有 app-shell-inner.tsx 布局:\n\n1. 导航路由:\n   / → 首页 (教程列表)\n   /chat → AI 聊天 (GLM ChatPanel)\n   /workspace → 工作区管理\n   /admin/* → 管理页面\n\n2. 侧边栏菜单:\n   app-sidebar.tsx 中添加 AI 对话入口\n   使用 MessageSquare 图标 (lucide-react)\n\n3. 响应式布局:\n   - 桌面模式: ChatPanel 占满内容区 (flex-1)\n   - 移动/Web: 全屏聊天界面\n\n4. 与终端面板共存:\n   - ChatPanel 和 TerminalPanel 可通过标签切换\n   - 或使用分屏模式 (50/50)"
+      }
+    },
+    {
+      "order": 7,
+      "title": "添加对话历史持久化",
+      "description": "使用 tauri-plugin-store 持久化聊天记录，支持多会话管理",
+      "action": {
+        "type": "manual",
+        "documentation": "在 Zustand store 中扩展:\n\n1. 数据结构:\n   conversations: Array<{\n     id: string,\n     title: string,        // 自动从第一条消息生成\n     messages: Message[],\n     model: string,\n     createdAt: number,\n     updatedAt: number\n   }>\n   currentConversationId: string | null\n\n2. 持久化配置 (已有 tauriStorage):\n   persist(store, {\n     name: 'chat-storage',\n     storage: tauriStorage,\n     partialize: (state) => ({\n       conversations: state.conversations\n     })\n   })\n\n3. 会话管理功能:\n   - 新建对话 (自动切换到新会话)\n   - 删除对话\n   - 对话列表侧边栏\n   - 自动生成标题 (取第一条消息前 20 字)\n\n4. Web 模式降级:\n   - Tauri 环境: tauri-plugin-store\n   - Web 浏览器: localStorage"
+      }
+    },
+    {
+      "order": 8,
+      "title": "Web 模式验证",
+      "description": "验证 Web 模式下应用正常运行",
+      "action": {
+        "type": "verification",
+        "command": "cd playground && pnpm dev",
+        "expected_output": "Ready in",
+        "documentation": "验证步骤:\n1. pnpm dev 启动 Next.js 开发服务器 (localhost:3000)\n2. 浏览器打开 http://localhost:3000\n3. 确认首页加载正常\n4. 导航到 /chat 页面\n5. 输入测试消息，验证 GLM API 调用\n6. 检查流式输出效果\n\n注意: Web 模式下终端功能不可用，聊天功能正常\nGLM API Key 需要配置在 .env.local 中:\n  ANTHROPIC_AUTH_TOKEN=your_api_key"
+      }
+    },
+    {
+      "order": 9,
+      "title": "桌面模式验证 (可选)",
+      "description": "验证 Tauri 桌面模式下应用正常运行 (需要 Rust 工具链)",
+      "action": {
+        "type": "verification",
+        "command": "cd playground/apps/desktop && pnpm tauri dev",
+        "expected_output": "Monitoring changes",
+        "documentation": "桌面模式需要额外依赖:\n1. Rust 工具链: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh\n2. 验证 Rust: rustc --version (需要 1.77.2+)\n3. pnpm tauri dev 启动桌面应用\n\n桌面模式独有功能:\n- PTY 终端 (portable-pty)\n- 文件系统访问 (tauri-plugin-fs)\n- 原生对话框 (tauri-plugin-dialog)\n- 持久化存储 (tauri-plugin-store)\n\n构建发布版:\n  pnpm tauri build  → 生成 .dmg (macOS) / .msi (Windows) / .AppImage (Linux)"
+      }
+    }
+  ],
+  "estimated_time": "2-4小时",
+  "tags": ["glm", "desktop", "web", "tauri", "next.js", "chat", "streaming", "ai"]
+}

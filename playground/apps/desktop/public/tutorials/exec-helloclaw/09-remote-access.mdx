@@ -1,0 +1,123 @@
+---
+title: 第九章 远程访问与网络
+description: 从外面控制家里的龙虾——SSH 隧道、Tailscale 组网
+difficulty: intermediate
+duration: 15
+category: ai-agent
+tags: [openclaw, ai, 远程, ssh, tailscale, 网络]
+course: exec-helloclaw
+courseOrder: 9
+source: builtin
+---
+
+# 第九章 远程访问与网络
+
+想在外面也能控制家里的龙虾？本章搞定远程访问。
+
+Gateway 默认只在本机运行（`127.0.0.1:18789`）。要从其他设备访问，你需要一条"通道"。
+
+## 1. 选哪种方案？
+
+| 方案 | 适用场景 | 难度 |
+|------|---------|------|
+| **Tailscale 组网** | 多设备跨网络，体验最好 | ⭐⭐ |
+| **SSH 隧道** | 有 SSH 就能用，最通用 | ⭐ |
+| **LAN 直连** | 同一局域网内 | ⭐ |
+
+不确定选哪个？**从 Tailscale 开始**——自动 HTTPS、无需手动转发、多设备共享。
+
+## 2. SSH 隧道（最通用的方式）
+
+在咖啡厅想连回家里的 Gateway？一行命令建立隧道：
+
+```bash
+ssh -N -L 18789:127.0.0.1:18789 user@远程主机IP
+```
+
+验证：
+
+<RunButton command="openclaw status --deep" />
+
+> **简化命令**：编辑 `~/.ssh/config`，添加 Host 配置后只需 `ssh -N my-gateway` 即可。
+
+### Token 认证
+
+如果 Gateway 开了认证，连接时还需要提供 token：
+
+```bash
+# macOS
+launchctl setenv OPENCLAW_GATEWAY_TOKEN "你的token"
+
+# Linux
+export OPENCLAW_GATEWAY_TOKEN="你的token"
+```
+
+## 3. Tailscale 组网（推荐）
+
+Tailscale 是基于 WireGuard 的零配置 VPN——装上就能用，自动穿透 NAT。
+
+### 安装
+
+```bash
+# macOS
+brew install tailscale
+
+# Linux
+curl -fsSL https://tailscale.com/install.sh | sh
+```
+
+### 启用 Tailscale 模式
+
+<RunButton command="openclaw config set gateway.tailscale.enabled true" />
+
+<RunButton command="openclaw gateway restart" />
+
+启用后，Gateway 自动通过 Tailscale 网络暴露，从任何已加入同一 Tailnet 的设备直接访问。
+
+### 连接
+
+在其他设备上安装 Tailscale 并登录同一账号，然后：
+
+```bash
+openclaw config set gateway.mode remote
+openclaw config set gateway.remote.url "ws://你的Tailscale-IP:18789"
+```
+
+## 4. LAN 直连
+
+同一局域网内最简单——让 Gateway 监听局域网 IP：
+
+<RunButton command='openclaw config set gateway.bind "0.0.0.0"' />
+
+> ⚠️ 这会暴露到局域网所有设备。务必设置认证！
+
+<RunButton command="openclaw config set gateway.auth.enabled true" />
+
+<RunButton command="openclaw gateway restart" />
+
+## 5. 安全提醒
+
+远程访问一定要做这三件事：
+
+1. **开启认证**：`openclaw config set gateway.auth.enabled true`
+2. **不要直接暴露端口到公网**：使用 Tailscale 或 SSH 隧道
+3. **定期检查**：`openclaw security audit`
+
+## 常见问题
+
+**SSH 隧道断了？** 检查远程主机是否在线、SSH 服务是否运行。
+
+**Tailscale 连不上？** 确认两台设备都登录了同一 Tailscale 账号。
+
+**不想每次手动连？** 配置 SSH Config 或使用 Tailscale 持久连接。
+
+## 完成检查
+
+- [ ] 选择了远程访问方案
+- [ ] 能从其他设备访问 Gateway
+- [ ] 认证已开启
+- [ ] `openclaw status --deep` 从远程设备显示正常
+
+---
+
+*内容来源：[hello-claw](https://github.com/datawhalechina/hello-claw) | CC BY-NC-SA 4.0*

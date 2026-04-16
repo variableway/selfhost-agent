@@ -1,0 +1,195 @@
+---
+title: 第五章 模型管理
+description: 配置和切换 AI 模型，让龙虾换上任何大脑
+difficulty: intermediate
+duration: 15
+category: ai-agent
+tags: [openclaw, ai, 模型, model, 配置]
+course: exec-helloclaw
+courseOrder: 5
+source: builtin
+---
+
+# 第五章 模型管理
+
+> 学完本章，你的龙虾就能换上任何你想要的 AI 大脑——免费的、最强的、本地的，甚至在一个挂掉时自动切换到另一个。
+
+## 0. 先搞清楚：模型和提供商是什么？
+
+OpenClaw 本身没有 AI 大脑，它负责连接——你选哪个大脑，它就用哪个。
+
+模型标识格式是 `提供商/模型名`，比如：
+
+| 标识 | 含义 |
+|------|------|
+| `openrouter/qwen/qwen3.6-plus:free` | OpenRouter 上的免费模型 |
+| `anthropic/claude-opus-4-6` | Anthropic 的旗舰模型 |
+| `openai/gpt-5.4` | OpenAI 的旗舰模型 |
+| `ollama/llama3.3` | 你电脑上本地运行的模型 |
+
+## 1. 快速上手
+
+想换个模型？一条命令：
+
+<RunButton command='openclaw config set agents.defaults.model.primary "anthropic/claude-opus-4-6"' />
+
+或者重新跑向导：
+
+<RunButton command="openclaw onboard" />
+
+## 2. 主模型、备用模型、图片模型
+
+每次对话，OpenClaw 按这个顺序选模型：
+
+```
+主模型（primary）
+  ↓ 挂了或限流
+备用模型列表（fallbacks），依次尝试
+  ↓ 每个模型内部
+同提供商的多个 API Key 之间轮换
+```
+
+**配置建议**：主模型选你用得到的最强的；备用模型做兜底或省钱。
+
+## 3. 聊天中切换模型
+
+无需重启，随时切换：
+
+| 命令 | 效果 |
+|------|------|
+| `/model` | 打开模型列表，用数字选 |
+| `/model 3` | 直接选第 3 个 |
+| `/model openai/gpt-5.2` | 直接指定模型 ID |
+| `/model status` | 查看当前模型和认证状态 |
+
+## 4. 命令行管理模型
+
+<RunButton command="openclaw models status" />
+
+<RunButton command="openclaw models list" />
+
+<RunButton command="openclaw models list --all" />
+
+<RunButton command='openclaw models set openai/gpt-5.4' />
+
+### 别名（让切换更方便）
+
+<RunButton command="openclaw models aliases add Sonnet anthropic/claude-sonnet-4-5" />
+
+<RunButton command="openclaw models aliases add Opus anthropic/claude-opus-4-6" />
+
+<RunButton command="openclaw models aliases list" />
+
+### 备用模型
+
+<RunButton command="openclaw models fallbacks list" />
+
+<RunButton command="openclaw models fallbacks add openai/gpt-5.2" />
+
+<RunButton command="openclaw models fallbacks add google/gemini-3-pro-preview" />
+
+## 5. 选择并配置提供商
+
+### 5.1 内置提供商
+
+| 提供商 | provider 标识 | 认证方式 | 示例模型 |
+|--------|-------------|---------|---------|
+| OpenAI | `openai` | `OPENAI_API_KEY` | `openai/gpt-5.4` |
+| Anthropic | `anthropic` | `ANTHROPIC_API_KEY` | `anthropic/claude-opus-4-6` |
+| OpenAI Code (Codex) | `openai-codex` | OAuth 登录 | `openai-codex/gpt-5.3-codex` |
+| Google Gemini | `google` | `GEMINI_API_KEY` | `google/gemini-3-pro-preview` |
+| OpenRouter | `openrouter` | `OPENROUTER_API_KEY` | `openrouter/anthropic/claude-sonnet-4-5` |
+| Z.AI (GLM) | `zai` | `ZAI_API_KEY` | `zai/glm-5` |
+| Mistral | `mistral` | `MISTRAL_API_KEY` | `mistral/mistral-large-latest` |
+| Groq | `groq` | `GROQ_API_KEY` | — |
+
+### 5.2 国产模型提供商
+
+#### 月之暗面 Kimi（Moonshot AI）
+
+```json5
+{
+  agents: {
+    defaults: { model: { primary: "moonshot/kimi-k2.5" } },
+  },
+  models: {
+    mode: "merge",
+    providers: {
+      moonshot: {
+        baseUrl: "https://api.moonshot.ai/v1",
+        apiKey: "${MOONSHOT_API_KEY}",
+        api: "openai-completions",
+        models: [{ id: "kimi-k2.5", name: "Kimi K2.5" }],
+      }
+    }
+  }
+}
+```
+
+#### 火山引擎（豆包 Doubao）
+
+<RunButton command="openclaw onboard --auth-choice volcengine-api-key" />
+
+#### 通义千问 Qwen（免费 OAuth）
+
+<RunButton command="openclaw plugins enable qwen-portal-auth" />
+
+<RunButton command="openclaw models auth login --provider qwen-portal --set-default" />
+
+> 其他国产提供商（硅基流动、DeepSeek 等）均通过 `models.providers` 以 OpenAI 兼容方式接入。
+
+### 5.3 本地模型
+
+#### Ollama
+
+<RunButton command="ollama pull llama3.3" />
+
+Ollama 在 `http://127.0.0.1:11434/v1` 运行时会被自动发现，无需额外配置。
+
+### 5.4 自定义提供商
+
+任何 OpenAI 或 Anthropic 兼容的 API 都可以通过 `models.providers` 接入：
+
+```json5
+{
+  agents: {
+    defaults: {
+      model: { primary: "lmstudio/minimax-m2.5-gs32" },
+    }
+  },
+  models: {
+    providers: {
+      lmstudio: {
+        baseUrl: "http://localhost:1234/v1",
+        apiKey: "LMSTUDIO_KEY",
+        api: "openai-completions",
+        models: [{
+          id: "minimax-m2.5-gs32",
+          name: "MiniMax M2.7",
+        }]
+      }
+    }
+  }
+}
+```
+
+## 常见问题
+
+**切换模型后没有回复？** 检查是否设置了 `agents.defaults.models` 白名单——只有列表里的模型才能使用。
+
+**怎么确认现在用的是哪个模型？** 运行 `openclaw models status` 或聊天中发 `/model status`。
+
+**本地模型和云端模型能混用吗？** 可以，把本地模型设为 fallback，云端挂了自动切本地。
+
+**想省钱？** 主模型用便宜的，旗舰模型做备用。
+
+## 完成检查
+
+- [ ] 理解模型标识格式（提供商/模型名）
+- [ ] 主模型已配置
+- [ ] 能在聊天中切换模型
+- [ ] （可选）备用模型已配置
+
+---
+
+*内容来源：[hello-claw](https://github.com/datawhalechina/hello-claw) | CC BY-NC-SA 4.0*

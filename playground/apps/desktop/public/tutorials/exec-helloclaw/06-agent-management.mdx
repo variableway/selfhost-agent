@@ -1,0 +1,220 @@
+---
+title: 第六章 智能体管理
+description: 调教龙虾——身份、性格、记忆、工作区全攻略
+difficulty: intermediate
+duration: 20
+category: ai-agent
+tags: [openclaw, ai, agent, 智能体, 工作区]
+course: exec-helloclaw
+courseOrder: 6
+source: builtin
+---
+
+# 第六章 智能体管理
+
+这章教你调教龙虾——让它知道自己是谁、记住你的偏好、按你的规矩干活。
+
+## 0. 什么是 Agent？
+
+**Agent（智能体）就是你的龙虾本身**——有自己的性格（人设文件）、记忆（工作区文件）和能力（工具）。
+
+默认情况下 OpenClaw 运行一个 Agent（id 为 `main`）。工作区就是龙虾的"家"：
+
+```
+~/.openclaw/workspace/
+```
+
+## 1. 网关架构（Gateway）
+
+Gateway（网关）是 OpenClaw 的后台服务，所有消息都经它统一处理后转发给 Agent。
+
+<RunButton command="openclaw gateway status" />
+
+<RunButton command="openclaw gateway restart" />
+
+<RunButton command="openclaw status" />
+
+## 2. Agent 工作区
+
+工作区（Workspace）是龙虾的"家"——它的身份、性格、记忆、技能全都存放在这里。
+
+### 工作区文件一览
+
+| 文件 | 用途 | 加载时机 |
+|------|------|---------|
+| `AGENTS.md` | 操作指令：告诉龙虾"怎么做事" | 每次会话开始 |
+| `SOUL.md` | 人设：性格、语气、边界 | 每次会话开始 |
+| `USER.md` | 用户资料：你是谁 | 每次会话开始 |
+| `IDENTITY.md` | 龙虾身份：名字、风格 | 每次会话开始 |
+| `TOOLS.md` | 工具使用备注 | 每次会话开始 |
+| `HEARTBEAT.md` | 心跳任务清单（可选） | 心跳运行时 |
+| `BOOT.md` | 启动清单（可选） | Gateway 启动时 |
+| `BOOTSTRAP.md` | 首次引导仪式（完成后删除） | 仅首次运行 |
+| `MEMORY.md` | 长期记忆（可选） | 仅主会话 |
+| `memory/YYYY-MM-DD.md` | 每日记忆日志 | 今天+昨天自动读取 |
+
+> **重要**：这些文件会消耗 Token。保持文件简洁，尤其是 `MEMORY.md`。
+
+### 如何编辑工作区文件？
+
+```bash
+# 用 VS Code 打开整个工作区目录
+code ~/.openclaw/workspace/
+
+# 或者打开单个文件
+code ~/.openclaw/workspace/IDENTITY.md
+```
+
+> **提示**：修改工作区文件后，需要发送 `/new` 开始新会话才能生效。
+
+---
+
+**身份三件套：让龙虾认识你和自己**
+
+#### IDENTITY.md —— 龙虾的身份证
+
+```markdown
+# 身份
+
+- 名字：阿虾
+- 称呼用户：老板
+- 语言：中文为主，技术术语保留英文
+- 表情符号：适度使用
+```
+
+#### SOUL.md —— 龙虾的性格
+
+```markdown
+# 人设
+
+## 性格
+- 专业但不刻板，偶尔幽默
+- 遇到不确定的问题，诚实说"我不确定"
+
+## 语气
+- 日常对话：轻松简洁
+- 技术讨论：严谨准确
+
+## 边界
+- 不执行未经确认的破坏性操作
+- 涉及金钱交易时，必须二次确认
+```
+
+#### USER.md —— 用户档案
+
+```markdown
+# 用户信息
+
+- 称呼：鲸哥
+- 角色：产品经理
+- 偏好：喜欢简洁清晰的表达
+- 时区：Asia/Shanghai
+```
+
+---
+
+**行为指南：教龙虾怎么做事**
+
+#### AGENTS.md —— 操作手册
+
+```markdown
+# 操作指令
+
+## 通用规则
+- 收到任务后，先确认理解再执行
+- 每完成一个步骤，主动汇报进度
+- 遇到错误先尝试自行解决
+
+## 记忆使用
+- 用户说"记住这个"时，立即写入 memory/YYYY-MM-DD.md
+- 重要的长期信息写入 MEMORY.md
+```
+
+#### TOOLS.md —— 工具使用备注
+
+```markdown
+# 工具使用备注
+
+## exec（命令执行）
+- 执行破坏性命令前必须确认
+- 长时间运行的命令加 timeout
+
+## browser（浏览器）
+- 优先使用搜索工具而非浏览器访问
+```
+
+---
+
+**生命周期：从出生到日常巡检**
+
+```
+BOOTSTRAP.md（首次启动，完成后删除）
+    → BOOT.md（每次 Gateway 重启时执行）
+        → HEARTBEAT.md（运行期间定期执行）
+```
+
+#### MEMORY.md —— 长期记忆（可选）
+
+```markdown
+# 长期记忆
+
+## 日常事务
+- 每周一上午有团队周会
+- 每月 25 号提交月度报表
+
+## 偏好
+- 邮件回复尽量简短
+- 不喜欢冗长的开场白
+```
+
+> ⚠️ `MEMORY.md` 会随时间增长。定期清理过时内容。
+
+## 3. 首次启动：引导仪式
+
+首次运行 Agent 时，OpenClaw 会执行一个**引导仪式**——帮助龙虾了解"它是谁"和"你是谁"。
+
+跳过引导：
+
+<RunButton command="openclaw config set agent.skipBootstrap true" />
+
+## 4. 会话管理
+
+发送 `/new` 开始新会话。`/new Opus` 还可以同时切换模型。
+
+### 多人场景下的隐私隔离
+
+多人使用时，设置会话隔离：
+
+<RunButton command="openclaw config set session.dmScope per-channel-peer" />
+
+## 5. 记忆系统
+
+OpenClaw 的记忆是**纯 Markdown 文件**——文件就是唯一真相来源。
+
+| 文件 | 用途 |
+|------|------|
+| `MEMORY.md` | 精选长期记忆（每次会话加载） |
+| `memory/YYYY-MM-DD.md` | 每日日志（按需读取，不占上下文） |
+
+写记忆的原则：说了"记住这个"，龙虾必须立即写入文件。
+
+## 6. 多 Agent 路由
+
+<RunButton command="openclaw agents add work" />
+
+<RunButton command="openclaw agents list --bindings" />
+
+每个 Agent 获得独立工作区和会话存储。
+
+## 完成检查
+
+- [ ] 理解工作区文件结构
+- [ ] IDENTITY.md 已编辑
+- [ ] SOUL.md 已编辑
+- [ ] USER.md 已编辑
+- [ ] AGENTS.md 已编辑
+- [ ] 理解记忆系统的工作方式
+
+---
+
+*内容来源：[hello-claw](https://github.com/datawhalechina/hello-claw) | CC BY-NC-SA 4.0*

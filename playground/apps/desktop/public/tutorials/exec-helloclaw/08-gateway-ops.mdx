@@ -1,0 +1,128 @@
+---
+title: 第八章 网关运维
+description: 管理 Gateway——启动、监控、排障
+difficulty: intermediate
+duration: 15
+category: ai-agent
+tags: [openclaw, ai, gateway, 网关, 运维]
+course: exec-helloclaw
+courseOrder: 8
+source: builtin
+---
+
+# 第八章 网关运维
+
+Gateway 是龙虾的神经中枢。本章教你管理它——启动、监控、排障。
+
+## 0. Gateway 是什么？
+
+Gateway 是 OpenClaw 的核心后台进程，负责连接聊天平台、调度 AI 模型、管理会话与工具。
+
+```
+用户消息 → [飞书/QQ/Telegram] → Gateway → AI 模型 → 用户
+                                    ↕
+                              控制面板 / CLI
+```
+
+## 1. 启动与管理
+
+<RunButton command="openclaw gateway --port 18789" />
+
+<RunButton command="openclaw gateway status" />
+
+<RunButton command="openclaw status" />
+
+<RunButton command="openclaw logs --follow" />
+
+### 作为系统服务运行（推荐）
+
+注册为系统服务后开机自启、崩溃自动重启：
+
+<RunButton command="openclaw gateway install" />
+
+<RunButton command="openclaw gateway restart" />
+
+<RunButton command="openclaw gateway stop" />
+
+- **macOS**：LaunchAgent（`ai.openclaw.gateway`）
+- **Linux / WSL2**：systemd 用户服务（`openclaw-gateway.service`）
+
+## 2. 配置管理
+
+配置文件为 JSON5 格式。
+
+| 编辑方式 | 命令/操作 |
+|---------|---------|
+| 配置向导 | `openclaw onboard` |
+| CLI | `openclaw config set <key> <value>` |
+| Web 控制面板 | `openclaw dashboard` |
+
+**配置写错会怎样**：Gateway 拒绝启动，运行 `openclaw doctor` 查看原因：
+
+<RunButton command="openclaw doctor" />
+
+<RunButton command="openclaw doctor --fix" />
+
+### 配置热更新
+
+通过 CLI 修改配置后**大部分设置自动生效，无需重启**。只有端口、绑定、认证、TLS 等基础设施字段需要重启。
+
+## 3. 日志
+
+```bash
+# 实时查看日志
+openclaw logs --follow
+
+# 查看最近 50 条日志
+openclaw logs --limit 50
+
+# 按级别过滤
+openclaw logs --level error
+
+# 仅查看 Agent 相关日志
+openclaw logs --source agent
+```
+
+## 4. 诊断
+
+<RunButton command="openclaw doctor" />
+
+doctor 会自动检查：
+- 配置文件完整性
+- 网关进程状态
+- 端口占用
+- 依赖服务状态
+- 权限问题
+
+## 5. 健康检查端点
+
+Gateway 提供 HTTP 健康检查端点：
+
+```bash
+curl http://localhost:18789/health
+```
+
+## 常见问题
+
+**Gateway 启动失败？** 运行 `openclaw doctor` 查看原因。
+
+**端口被占用？** 修改端口：
+
+<RunButton command="openclaw config set gateway.port 18790" />
+
+<RunButton command="openclaw gateway restart" />
+
+**配置修改后不生效？** 只有 `gateway.*` 字段需要重启：
+
+<RunButton command="openclaw gateway restart" />
+
+## 完成检查
+
+- [ ] Gateway 已安装为系统服务
+- [ ] 能通过 `openclaw gateway status` 查看状态
+- [ ] 理解配置热更新机制
+- [ ] 知道如何查看日志和运行诊断
+
+---
+
+*内容来源：[hello-claw](https://github.com/datawhalechina/hello-claw) | CC BY-NC-SA 4.0*

@@ -1,0 +1,148 @@
+---
+title: 第二章 OpenClaw 快速安装
+description: 通过命令行安装 OpenClaw，10 分钟完成配置
+difficulty: beginner
+duration: 15
+category: ai-agent
+tags: [openclaw, ai, cli, 安装]
+course: exec-helloclaw
+courseOrder: 2
+source: builtin
+---
+
+# 第二章 OpenClaw 快速安装
+
+> 适用人群：有终端使用经验的用户
+> 预计时间：10 分钟
+
+本章结束时，你将在电脑上运行一个真正的 AI 助手——可以在终端对话，也可以通过浏览器控制面板管理它。
+
+> **想跳过这些？** [第一章](./01-autoclaw-install)介绍了 **AutoClaw**——下载 → 双击 → 注册即用，内置模型和免费额度。
+
+## 0. 支持的平台
+
+| 平台 | Gateway 支持 | 配套应用 |
+|------|-------------|---------|
+| **macOS** | 原生支持 | 菜单栏应用 + 语音唤醒 |
+| **Windows** | 支持（推荐 WSL2） | 计划中 |
+| **Linux** | 原生支持 | 计划中 |
+| **iOS** | — | Canvas 画布、摄像头、语音唤醒 |
+| **Android** | — | Canvas 画布、摄像头、屏幕共享 |
+
+> **手机用户提示**：即使不安装配套 App，你也可以通过 WhatsApp / Telegram 等聊天软件直接和 OpenClaw 对话。
+
+## 1. 安装
+
+官方推荐使用一键安装脚本——自动检测 Node.js、安装 CLI、启动配置向导。
+
+### macOS / Linux / WSL2
+
+<RunButton command="curl -fsSL https://openclaw.ai/install.sh | bash" />
+
+脚本会自动完成 Node.js 检测与安装、OpenClaw CLI 全局安装、启动配置向导。
+
+> 只装不配？加 `--no-onboard` 跳过向导
+
+### Windows（PowerShell）
+
+打开 PowerShell（管理员模式），运行：
+
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+iwr -useb https://openclaw.ai/install.ps1 | iex
+```
+
+### 验证安装
+
+<RunButton command="openclaw --version" />
+
+> **什么是 Node.js？** OpenClaw 需要 Node.js 22.14+ 运行环境。安装脚本会自动处理。如果你已经装过，脚本会跳过。
+
+## 2. 配置 AI 模型
+
+OpenClaw 本身不包含 AI 大脑，需要连接一个"模型提供商"。运行配置向导：
+
+<RunButton command="openclaw onboard --install-daemon" />
+
+向导关键步骤：
+
+1. **安全确认** → 选 **Yes**
+2. **配置模式** → 选 **QuickStart**
+3. **模型提供商** → 选 **Custom Provider**
+
+以 OpenRouter 免费模型为例：
+
+```
+API Base URL: https://openrouter.ai/api/v1
+API Key: sk-or-v1-你的密钥
+Endpoint compatibility: OpenAI-compatible
+Model ID: qwen/qwen3.6-plus:free
+```
+
+> **推荐 OpenRouter**——注册即可使用免费模型（如 Step 3.5 Flash），无需充值。
+
+**获取 OpenRouter API Key：**
+
+1. 访问 [OpenRouter 官网](https://openrouter.ai)
+2. 点击 **Sign In**，支持 Google、GitHub、邮箱注册
+3. 头像 → **Settings** → **API Keys** → **Create**
+4. 复制密钥（以 `sk-or-v1-` 开头）
+
+> **备选方案**：硅基流动 SiliconFlow（国内提供商），新注册送 16 元免费算力券。Base URL: `https://api.siliconflow.cn/v1`
+
+## 3. 验证与首次对话
+
+<RunButton command="openclaw status" />
+
+开始你的第一次对话：
+
+<RunButton command="openclaw tui" />
+
+试着输入：`你好，请介绍一下你自己` —— 如果龙虾回复了，恭喜你，安装成功！
+
+打开 Web 控制面板：
+
+<RunButton command="openclaw dashboard" />
+
+浏览器会自动打开 `http://localhost:18789`。
+
+## 4. 常见问题
+
+**Q: Windows 上 `openclaw` 提示"命令未找到"？**
+
+以管理员身份运行：
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+**Q: 提示 "API key not found"？**
+
+重新运行配置向导：
+
+<RunButton command="openclaw onboard" />
+
+**Q: 机器人回复很慢？**
+
+尝试换一个更快的模型（如 `deepseek-ai/DeepSeek-V3`），或检查网络连接。
+
+## 5. 版本升级
+
+<RunButton command="curl -fsSL https://openclaw.ai/install.sh | bash" />
+
+升级后运行健康检查：
+
+<RunButton command="openclaw doctor" />
+
+<RunButton command="openclaw gateway restart" />
+
+## 完成检查
+
+- [ ] OpenClaw CLI 已安装
+- [ ] `openclaw --version` 输出正确
+- [ ] 模型提供商已配置
+- [ ] `openclaw status` 显示正常
+- [ ] 首次对话成功
+
+---
+
+*内容来源：[hello-claw](https://github.com/datawhalechina/hello-claw) | CC BY-NC-SA 4.0*

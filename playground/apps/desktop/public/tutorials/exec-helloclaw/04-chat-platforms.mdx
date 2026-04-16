@@ -1,0 +1,164 @@
+---
+title: 第四章 聊天平台接入
+description: 接入飞书、Telegram、Discord 等聊天平台
+difficulty: beginner
+duration: 15
+category: ai-agent
+tags: [openclaw, ai, 飞书, telegram, discord]
+course: exec-helloclaw
+courseOrder: 4
+source: builtin
+---
+
+# 第四章 聊天平台接入
+
+> 适用人群：想让 AI 助手接入聊天平台的用户
+> 预计时间：15 分钟
+
+接完这章，你就能在手机上跟龙虾对话了。
+
+## 0. 支持哪些聊天平台？
+
+OpenClaw 支持几乎所有主流聊天软件：
+
+| 渠道 | 说明 | 安装方式 |
+|------|------|---------|
+| **飞书 / Lark** | WebSocket 长连接；企业协作首选 | 内置 |
+| **微信** | WorkBuddy 桥接 | 插件 |
+| **QQ** | QQ 开放平台 Bot API | 插件 |
+| **WhatsApp** | 全球最流行；需 QR 配对 | 内置 |
+| **Telegram** | Bot API；支持群聊 | 内置 |
+| **Discord** | Bot API + Gateway | 内置 |
+| **Slack** | Bolt SDK；工作区应用 | 内置 |
+| **Signal** | signal-cli；注重隐私 | 内置 |
+| **iMessage** | BlueBubbles | 内置 |
+
+> 多个平台可以同时接入！OpenClaw 会按来源自动路由消息，飞书处理工作、Telegram 做个人助理，共享同一个 AI 大脑。
+
+本章以**飞书**为例——国内办公场景首选。
+
+## 1. 前置准备
+
+- 已完成 OpenClaw 手动安装（`openclaw status` 显示正常）
+- 拥有飞书账号（个人账号即可）
+
+## 2. 创建飞书应用
+
+### 第一步：登录飞书开放平台
+
+访问 [飞书开放平台](https://open.feishu.cn/app)，使用飞书账号登录。
+
+> 国际版 Lark 用户访问 [Lark Open Platform](https://open.larksuite.com/app)
+
+### 第二步：创建企业自建应用
+
+点击"创建企业自建应用"，填写名称（如"OpenClaw 助理"）和描述。
+
+### 第三步：获取应用凭证
+
+进入"凭证与基础信息"，复制 **App ID**（格式 `cli_xxx`）和 **App Secret**。
+
+### 第四步：启用机器人能力
+
+进入"添加应用能力" → "机器人"，点击"添加"。
+
+> **必须先做这步**：否则消息相关权限无法开通。
+
+### 第五步：配置权限
+
+进入"权限管理"，点击"批量导入"，粘贴权限 JSON。最少需要以下权限：
+
+- `im:message` — 消息收发
+- `im:message.p2p_msg:readonly` — 读取私聊消息
+- `im:message.group_at_msg:readonly` — 读取群聊@消息
+- `im:message:send_as_bot` — 以机器人身份发送消息
+- `im:resource` — 资源访问
+
+导入后点击"申请开通"确认。
+
+### 第六步：设置可用范围
+
+进入"可用范围"，添加可以使用此应用的人员或部门。自己用就添加自己即可。
+
+> **最常被遗漏的一步**——不设置可用范围会导致"应用已发布，但飞书里找不到机器人"。
+
+### 第七步：发布应用
+
+进入"版本管理与发布"，创建版本并提交发布申请。
+
+## 3. 在 OpenClaw 中添加飞书渠道
+
+<RunButton command="openclaw channels add" />
+
+选择"Feishu/Lark"，输入 App ID 和 App Secret。
+
+也可以一行搞定：
+
+<RunButton command='openclaw channels add --channel feishu --token "cli_xxx:你的App Secret"' />
+
+添加后重启网关：
+
+<RunButton command="openclaw gateway restart" />
+
+<RunButton command="openclaw gateway status" />
+
+确认输出中 feishu 渠道状态为 **connected**。
+
+## 4. 配置事件订阅
+
+回到飞书开放平台，进入"事件与回调" → "事件配置"：
+
+1. 选择"**使用长连接接收事件**"
+2. 添加事件：`im.message.receive_v1`
+
+> **为什么用长连接？** Webhook 需要公网 IP，长连接由 OpenClaw 主动连飞书——不需要公网 IP、不需要域名、家用网络就能用。
+
+## 5. 配对与首次对话
+
+在飞书中找到你的机器人，发送"你好"。机器人会回复一个 **8 位配对码**。
+
+在终端批准配对：
+
+<RunButton command="openclaw pairing approve feishu <配对码>" />
+
+配对成功后，飞书里的龙虾就能回你了。
+
+## 6. 群聊中使用
+
+把机器人拉进飞书群，**@机器人** 触发回复。
+
+群聊访问控制策略：
+
+| 策略 | 行为 |
+|------|------|
+| `"open"` | 允许所有群聊，仍需 @提及才回复 |
+| `"allowlist"` | 仅允许白名单中的群（默认） |
+| `"disabled"` | 禁用所有群聊消息 |
+
+## 常见问题
+
+**事件订阅保存失败？** 先确认网关已运行（`openclaw gateway status`）。
+
+**机器人没有回复？** 按顺序排查：
+
+<RunButton command="openclaw status" />
+
+<RunButton command="openclaw logs --follow" />
+
+<RunButton command="openclaw gateway restart" />
+
+**权限审核不通过？** 进入飞书管理后台 → "工作台" → "应用审核"，找到应用点击"通过"。
+
+## 完成检查
+
+- [ ] 飞书应用已创建
+- [ ] 机器人能力已启用
+- [ ] 权限已配置并审核通过
+- [ ] 渠道已添加到 OpenClaw
+- [ ] 网关状态显示 connected
+- [ ] 事件订阅已配置
+- [ ] 配对成功，能正常对话
+
+---
+
+*内容来源：[hello-claw](https://github.com/datawhalechina/hello-claw) | CC BY-NC-SA 4.0*
